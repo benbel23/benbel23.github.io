@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DS Météo — Coach météo cycliste</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f3f1ea; --panel:#fffdf8; --ink:#1c1b18; --muted:#7a766d;
+    --line:#e4e0d6; --accent:#1c1b18;
+    --green:#2e9e3f; --green-bg:#e6f4e6;
+    --orange:#e2890b; --orange-bg:#fbedd1;
+    --red:#d8392f; --red-bg:#fbe0dd;
+    --blue:#2f6fd8;
+    --shadow:0 10px 30px rgba(28,27,24,.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--ink);overflow:hidden}
+
+  /* ---------- TOPBAR ---------- */
+  #topbar{
+    position:fixed;top:0;left:0;right:0;height:64px;z-index:2000;
+    display:flex;align-items:center;gap:14px;padding:0 18px;
+    background:rgba(243,241,234,.92);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .logo{display:flex;align-items:baseline;gap:8px;font-weight:800;font-size:20px;letter-spacing:-.6px;white-space:nowrap}
+  .logo .bike{font-size:22px;transform:translateY(2px)}
+  .logo .tag{font-size:10.5px;font-weight:600;color:var(--muted);letter-spacing:.6px;text-transform:uppercase}
+  .grow{flex:1}
+  .ctrl{display:flex;flex-direction:column;gap:3px}
+  .ctrl label{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  input[type=time],input[type=number],input[type=date]{
+    font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:500;
+    padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);width:88px;
+  }
+  input[type=date]{width:140px}
+  input[type=number]{width:70px}
+  .btn{
+    font-family:'Outfit',sans-serif;font-weight:700;font-size:13.5px;cursor:pointer;
+    padding:10px 16px;border:1px solid var(--ink);border-radius:10px;background:var(--ink);color:#fff;
+    transition:transform .12s ease, box-shadow .12s ease;letter-spacing:.2px;white-space:nowrap;
+  }
+  .btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(28,27,24,.22)}
+  .btn:active{transform:translateY(0)}
+  .btn.ghost{background:#fff;color:var(--ink)}
+  .iconbtn{
+    width:40px;height:40px;flex-shrink:0;cursor:pointer;font-size:17px;
+    border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);
+    display:flex;align-items:center;justify-content:center;transition:transform .12s, box-shadow .12s, background .2s;
+  }
+  .iconbtn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(28,27,24,.18)}
+
+  /* ---------- DARK MODE ---------- */
+  body.dark{
+    --bg:#17161b; --panel:#201e26; --ink:#f0eef5; --muted:#9a96a6;
+    --line:#332f3c; --accent:#f0eef5;
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  body.dark .btn.ghost{background:var(--panel);color:var(--ink)}
+  body.dark .btn{background:var(--ink);color:#17161b;border-color:var(--ink)}
+  body.dark .iconbtn{background:var(--panel)}
+  body.dark .file-btn{background:var(--panel)}
+  body.dark input[type=time],body.dark input[type=number],body.dark input[type=date]{background:var(--panel);color:var(--ink);color-scheme:dark}
+  body.dark .stat,body.dark .cp{background:var(--panel)}
+  body.dark .wind-badge{background:#fff;border-color:#e4e0d6}
+  body.dark #topbar{background:rgba(23,22,27,.92)}
+  body.dark #map{background:#0f0f14}
+  /* le bloc briefing doit rester un panneau contrasté (sinon texte invisible) */
+  body.dark .briefing{background:#2b2833;color:#f0eef5}
+  body.dark .briefing .bh{color:#a8a3b4}
+  body.dark #toast{background:#2b2833;color:#f0eef5}
+  /* marqueurs : on garde des fonds pastel clairs car les icônes sont dessinées en sombre */
+  .file-btn{
+    font-family:'Outfit',sans-serif;font-weight:600;font-size:13px;cursor:pointer;
+    padding:9px 13px;border:1px dashed var(--muted);border-radius:10px;background:#fff;color:var(--ink);
+    display:flex;align-items:center;gap:7px;
+  }
+  .file-btn:hover{border-color:var(--ink)}
+  .file-btn .fname{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #gpxInput{display:none}
+
+  /* ---------- MAP ---------- */
+  #map{position:fixed;top:64px;left:0;right:360px;bottom:0;background:#dfe6e2;z-index:1}
+
+  /* ---------- SIDEBAR ---------- */
+  #sidebar{
+    position:fixed;top:64px;right:0;bottom:0;width:360px;z-index:1500;
+    background:var(--panel);border-left:1px solid var(--line);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  #sbScroll{flex:1;overflow-y:auto;padding:18px 18px 8px}
+  #sbScroll::-webkit-scrollbar{width:8px}
+  #sbScroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+
+  .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;color:var(--muted);gap:14px;padding:30px}
+  .empty .big{font-size:40px}
+  .empty h2{font-size:18px;color:var(--ink);font-weight:700}
+  .empty p{font-size:13.5px;line-height:1.5;max-width:240px}
+
+  .briefing{
+    background:var(--ink);color:#f3f1ea;border-radius:14px;padding:16px 16px 18px;margin-bottom:16px;
+    box-shadow:var(--shadow);position:relative;overflow:hidden;
+  }
+  .briefing::before{content:"🎙️";position:absolute;top:-8px;right:-4px;font-size:64px;opacity:.07;transform:rotate(12deg)}
+  .briefing .bh{font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#c9c4b8;margin-bottom:8px}
+  .briefing .bt{font-size:14.5px;line-height:1.5;font-weight:400}
+  .briefing .bt b{font-weight:700;color:#fff}
+  .verdict{display:inline-flex;align-items:center;gap:7px;margin-top:12px;font-weight:700;font-size:13px;padding:7px 12px;border-radius:999px}
+  .verdict.green{background:var(--green);color:#fff}
+  .verdict.yellow{background:var(--orange);color:#fff}
+  .verdict.red{background:var(--red);color:#fff}
+
+  .stats{display:flex;gap:8px;margin-bottom:16px}
+  .stat{flex:1;background:#fff;border:1px solid var(--line);border-radius:11px;padding:10px 8px;text-align:center}
+  .stat .v{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700}
+  .stat .l{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-top:2px}
+
+  .sectitle{font-size:10.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:4px 2px 10px}
+
+  .cp{
+    display:flex;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);
+    border-radius:12px;padding:11px 12px;margin-bottom:9px;cursor:pointer;transition:border-color .12s, box-shadow .12s, transform .12s;
+  }
+  .cp:hover{border-color:var(--ink);box-shadow:var(--shadow);transform:translateY(-1px)}
+  .cp.hot{box-shadow:0 0 0 2px var(--ink)}
+  .cp .dot{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .cp .dot svg{width:24px;height:24px}
+  .cp.green .dot{background:var(--green-bg)}
+  .cp.yellow .dot{background:var(--orange-bg)}
+  .cp.red .dot{background:var(--red-bg)}
+  .cp .info{flex:1;min-width:0}
+  .cp .top{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+  .cp .time{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px}
+  .cp .km{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+  .cp .place{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
+  .cp .row2{display:flex;gap:11px;margin-top:6px;font-size:11.5px;flex-wrap:wrap}
+  .cp .chip{display:inline-flex;align-items:center;gap:3px;font-family:'JetBrains Mono',monospace;font-weight:500}
+  .cp .chip.warn{color:var(--red);font-weight:700}
+  .windarrow{display:inline-block;width:13px;height:13px;flex-shrink:0}
+  .wind-badge{position:absolute;bottom:-7px;right:-7px;width:20px;height:20px;border-radius:50%;
+    background:#fff;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+
+  #elevWrap{padding:14px 16px;border-top:1px solid var(--line);background:var(--panel)}
+  #elevWrap .sectitle{margin:0 0 8px}
+  #elev{width:100%;height:72px;display:block}
+
+  #refreshBar{
+    padding:9px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);
+    display:flex;justify-content:space-between;align-items:center;background:var(--panel);
+  }
+  #refreshBar .live{display:inline-flex;align-items:center;gap:6px}
+  #refreshBar .pulse{width:7px;height:7px;border-radius:50%;background:var(--green);animation:livepulse 2s infinite}
+  @keyframes livepulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+  /* refresh toast */
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);z-index:3000;
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;
+    opacity:0;pointer-events:none;transition:opacity .3s, transform .3s;box-shadow:var(--shadow)}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ---------- DRAG & DROP ---------- */
+  #dropzone{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;
+    background:rgba(28,27,24,.55);backdrop-filter:blur(4px)}
+  #dropzone.show{display:flex}
+  #dropzone .box{background:var(--panel);color:var(--ink);border:3px dashed var(--ink);border-radius:22px;
+    padding:48px 72px;text-align:center;font-weight:700;font-size:22px;box-shadow:var(--shadow);
+    animation:dzpop .18s ease}
+  #dropzone .box .ic{font-size:52px;margin-bottom:14px;letter-spacing:-6px}
+  #dropzone .box small{display:block;font-weight:500;font-size:14px;color:var(--muted);margin-top:10px;letter-spacing:0}
+  @keyframes dzpop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+
+  /* leaflet marker pieces */
+  .ds-marker{display:flex;align-items:center;justify-content:center;border-radius:50%;border:2.5px solid;background:#fff}
+  .ds-marker svg{width:20px;height:20px}
+  .ds-marker.green{border-color:var(--green);background:var(--green-bg)}
+  .ds-marker.yellow{border-color:var(--orange);background:var(--orange-bg)}
+  .ds-marker.red{border-color:var(--red);background:var(--red-bg)}
+  .ds-flag{font-size:24px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
+  .ds-rider{font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;
+    width:40px;height:40px;border-radius:50%;background:#fff;border:3px solid var(--ink);animation:riderpulse 1s infinite}
+  .ds-rider.green{border-color:var(--green)} .ds-rider.yellow{border-color:var(--orange)} .ds-rider.red{border-color:var(--red)}
+  @keyframes riderpulse{0%,100%{box-shadow:0 0 0 0 rgba(28,27,24,.45)}50%{box-shadow:0 0 0 10px rgba(28,27,24,0)}}
+  .ds-diramt svg{display:block}
+
+  @media (max-width:820px){
+    #map{right:0;bottom:46%}
+    #sidebar{top:auto;left:0;right:0;bottom:0;width:auto;height:46%;border-left:none;border-top:1px solid var(--line)}
+    #topbar{flex-wrap:wrap;height:auto;padding:10px 14px;gap:10px}
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo"><span class="bike">🚴</span>DS&nbsp;Météo<span class="tag">coach cycliste</span></div>
+  <div class="grow"></div>
+  <label class="file-btn" for="gpxInput">📂 GPX <span class="fname" id="fname">aucun fichier</span></label>
+  <input type="file" id="gpxInput" accept=".gpx">
+  <div class="ctrl"><label>Date</label><input type="date" id="startDate"></div>
+  <div class="ctrl"><label>Départ</label><input type="time" id="startTime" value="08:15"></div>
+  <div class="ctrl"><label>Vitesse</label><input type="number" id="speed" value="25" min="8" max="45" step="1"></div>
+  <button class="iconbtn" id="darkBtn" title="Mode sombre">🌙</button>
+  <button class="iconbtn" id="exportBtn" title="Exporter en image">⬇</button>
+  <button class="btn ghost" id="bestBtn">🔮 Meilleur créneau</button>
+  <button class="btn" id="goBtn">Analyser</button>
+</div>
+
+<div id="map"></div>
+
+<div id="sidebar">
+  <div id="sbScroll">
+    <div class="empty" id="emptyState">
+      <div class="big">🗺️🚴‍♂️</div>
+      <h2>Charge ton tracé</h2>
+      <p>Importe un <b>.gpx</b> (sortie Strava / Komoot), règle l'heure de départ et ta vitesse, puis <b>Analyser</b>.</p>
+    </div>
+    <div id="content" style="display:none"></div>
+  </div>
+  <div id="elevWrap" style="display:none">
+    <div class="sectitle">Profil altimétrique</div>
+    <canvas id="elev"></canvas>
+  </div>
+  <div id="refreshBar" style="display:none">
+    <span class="live"><span class="pulse"></span> Données live</span>
+    <span id="nextRefresh"></span>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="dropzone"><div class="box"><div class="ic">📂🚴</div>Déposez votre fichier GPX<small>Strava · Komoot · Garmin…</small></div></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+/* ============================================================
+   DS Météo — coach météo cycliste (GPX → Open-Meteo)
+   Fichier unique, vanilla JS + Leaflet. Focus : vent, pluie, orage.
+   ============================================================ */
+
+/* ---- Communes Bas-Rhin / Kochersberg / piémont vosgien (label de proximité) ---- */
+const TOWNS = [
+  ["Strasbourg",48.5734,7.7521],["Schiltigheim",48.6053,7.7506],["Bischheim",48.6147,7.7508],
+  ["Hoenheim",48.6217,7.7544],["Mundolsheim",48.6433,7.7136],["Lampertheim",48.6606,7.6953],
+  ["Vendenheim",48.6669,7.7156],["Eckwersheim",48.6822,7.6939],["Mittelhausbergen",48.6022,7.7000],
+  ["Oberhausbergen",48.6019,7.6889],["Wolfisheim",48.5856,7.6783],["Eckbolsheim",48.5806,7.6864],
+  ["Achenheim",48.5731,7.6353],["Breuschwickersheim",48.5764,7.6125],["Hangenbieten",48.5519,7.6328],
+  ["Holtzheim",48.5586,7.6597],["Lingolsheim",48.5556,7.6850],["Ostwald",48.5436,7.7064],
+  ["Geispolsheim",48.5158,7.6442],["Entzheim",48.5328,7.6394],["Duppigheim",48.5328,7.5850],
+  ["Duttlenheim",48.5269,7.5783],["Molsheim",48.5403,7.4925],["Mutzig",48.5394,7.4514],
+  ["Dorlisheim",48.5267,7.5008],["Rosheim",48.4972,7.4711],["Obernai",48.4628,7.4817],
+  ["Ottrott",48.4536,7.4181],["Barr",48.4078,7.4475],["Wasselonne",48.6383,7.4453],
+  ["Marmoutier",48.6892,7.3814],["Saverne",48.7411,7.3625],["Marlenheim",48.6181,7.4928],
+  ["Wangen",48.6231,7.4631],["Westhoffen",48.5942,7.4322],["Balbronn",48.5786,7.3997],
+  ["Traenheim",48.5947,7.4639],["Scharrachbergheim",48.5828,7.4669],["Kirchheim",48.6011,7.4839],
+  ["Odratzheim",48.5953,7.4750],["Dahlenheim",48.5908,7.5083],["Dangolsheim",48.5717,7.4828],
+  ["Furdenheim",48.5928,7.5897],["Ittenheim",48.5942,7.6256],["Handschuheim",48.5878,7.6044],
+  ["Hurtigheim",48.6028,7.6094],["Pfettisheim",48.6383,7.6394],["Pfulgriesheim",48.6244,7.6708],
+  ["Dingsheim",48.6178,7.6533],["Griesheim-sur-Souffel",48.6200,7.6603],["Truchtersheim",48.6533,7.6228],
+  ["Kuttolsheim",48.6386,7.5828],["Wiwersheim",48.6275,7.6017],["Stutzheim-Offenheim",48.6131,7.6342],
+  ["Quatzenheim",48.6097,7.5847],["Wintzenheim-Koch.",48.6314,7.5717],["Willgottheim",48.6489,7.5494],
+  ["Schnersheim",48.6403,7.5856],["Nordheim",48.6203,7.5253],["Avolsheim",48.5544,7.4839],
+  ["Soultz-les-Bains",48.5667,7.5078],["Wolxheim",48.5611,7.4972],["Ergersheim",48.5639,7.5392],
+  ["Osthoffen",48.5772,7.5847],["Kolbsheim",48.5594,7.5694],["Dachstein",48.5453,7.5333]
+];
+
+/* ---- Helpers géo ---- */
+const R=6371, toRad=d=>d*Math.PI/180;
+function hav(a,b,c,d){const dl=toRad(c-a),dn=toRad(d-b);const x=Math.sin(dl/2)**2+Math.cos(toRad(a))*Math.cos(toRad(c))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
+function nearestTown(lat,lon){let best=null,bd=1e9;for(const t of TOWNS){const d=hav(lat,lon,t[1],t[2]);if(d<bd){bd=d;best=t;}}return best[0];}
+
+/* ---- Risque (repris tel quel) ---- */
+function risk(prob,mm,cape,gusts){
+  if(prob>=60 && mm>=0.5) return 'red';
+  if(cape>500) return 'red';
+  if(gusts>50) return 'red';
+  if(prob>=40 || mm>=0.2) return 'yellow';
+  if(cape>200) return 'yellow';
+  return 'green';
+}
+
+/* ---- Icônes météo SVG (WMO) ---- */
+function wIcon(code){
+  const c="#1c1b18", sun="#e2890b", rain="#2f6fd8";
+  if(code===0) return `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="${sun}"/><g stroke="${sun}" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></g></svg>`;
+  if(code<=2) return `<svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="4" fill="${sun}"/><path d="M6 16a4 4 0 0 1 .5-7.9A5 5 0 0 1 16 9a3.5 3.5 0 0 1 0 7H6z" fill="#fff" stroke="${c}" stroke-width="1.4"/></svg>`;
+  if(code===3) return `<svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1 .4-8 5.5 5.5 0 0 1 10.6 1.3A3.6 3.6 0 0 1 17 18H7z" fill="#dcdad3" stroke="${c}" stroke-width="1.4"/></svg>`;
+  if(code>=45 && code<=48) return `<svg viewBox="0 0 24 24"><g stroke="${c}" stroke-width="1.5" stroke-linecap="round"><path d="M4 9h14M5 12h15M4 15h14M6 18h12"/></g></svg>`;
+  if(code>=51 && code<=57) return `<svg viewBox="0 0 24 24"><path d="M7 13a4 4 0 0 1 .4-8 5.5 5.5 0 0 1 10.6 1.3A3.6 3.6 0 0 1 17 13H7z" fill="#dcdad3" stroke="${c}" stroke-width="1.3"/><g stroke="${rain}" stroke-width="1.6" stroke-linecap="round"><path d="M9 16v2M13 16v2M17 16v2"/></g></svg>`;
+  if(code>=61 && code<=67 || code>=80 && code<=82) return `<svg viewBox="0 0 24 24"><path d="M7 12a4 4 0 0 1 .4-8 5.5 5.5 0 0 1 10.6 1.3A3.6 3.6 0 0 1 17 12H7z" fill="#cfd6d3" stroke="${c}" stroke-width="1.3"/><g stroke="${rain}" stroke-width="1.8" stroke-linecap="round"><path d="M8 15l-1 4M12 15l-1 4M16 15l-1 4"/></g></svg>`;
+  if(code>=71 && code<=77 || code>=85 && code<=86) return `<svg viewBox="0 0 24 24"><path d="M7 12a4 4 0 0 1 .4-8 5.5 5.5 0 0 1 10.6 1.3A3.6 3.6 0 0 1 17 12H7z" fill="#e7ebea" stroke="${c}" stroke-width="1.3"/><g stroke="#7aa7d8" stroke-width="1.6" stroke-linecap="round"><path d="M9 16v3M13 16v3M17 16v3"/></g></svg>`;
+  if(code>=95) return `<svg viewBox="0 0 24 24"><path d="M7 11a4 4 0 0 1 .4-8 5.5 5.5 0 0 1 10.6 1.3A3.6 3.6 0 0 1 17 11H7z" fill="#b9bfbd" stroke="${c}" stroke-width="1.3"/><path d="M12 11l-3 5h3l-1.5 4 5-6h-3l1.5-3z" fill="${sun}" stroke="${c}" stroke-width=".8" stroke-linejoin="round"/></svg>`;
+  return `<svg viewBox="0 0 24 24"><path d="M7 16a4 4 0 0 1 .4-8 5.5 5.5 0 0 1 10.6 1.3A3.6 3.6 0 0 1 17 16H7z" fill="#dcdad3" stroke="${c}" stroke-width="1.4"/></svg>`;
+}
+
+/* ---- Flèche de vent (direction = vers où va le vent) ---- */
+function windArrow(dir,spd,size){
+  const col = spd>35 ? 'var(--red)' : spd>20 ? 'var(--orange)' : 'var(--green)';
+  const rot = (dir+180)%360;
+  return `<svg class="windarrow" viewBox="0 0 24 24" style="width:${size}px;height:${size}px;transform:rotate(${rot}deg)"><path d="M12 2l5 9h-3v11h-4V11H7l5-9z" fill="${col}"/></svg>`;
+}
+
+/* ---- Cardinal FR ---- */
+function card(d){const a=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];return a[Math.round(d/22.5)%16];}
+
+/* ---- Cap du tracé à une distance (bearing 0=N, sens horaire) ---- */
+function routeBearing(dist){
+  const total=cumDist[cumDist.length-1];
+  const a=pointAt(Math.max(0,dist-0.1));
+  const b=pointAt(Math.min(total,dist+0.1));
+  const lat=toRad((a.lat+b.lat)/2);
+  const dn=b.lat-a.lat, de=(b.lon-a.lon)*Math.cos(lat);
+  return (Math.atan2(de,dn)*180/Math.PI+360)%360;
+}
+
+/* ---- Vent relatif au cycliste : face / dos / travers ----
+   wdir = d'où vient le vent ; vent "vers" = (wdir+180). On compare au cap. */
+function windRel(wdir,bearing){
+  const toward=(wdir+180)%360;
+  let diff=((toward-bearing+540)%360)-180;   // -180..180
+  const a=Math.abs(diff);
+  if(a<45)  return {key:'dos',   txt:'dos',     ico:'⬇'};  // vent dans le dos
+  if(a>135) return {key:'face',  txt:'face',    ico:'⬆'};  // vent de face
+  return     {key:'travers',txt:'travers', ico:'⟷'};       // vent de travers
+}
+
+/* ---- État global ---- */
+let map, layer, tile, dark=false, routeLine=null, pts=[], cumDist=[], checkpoints=[], riderMarker=null, refreshTimer=null, fcDays=2;
+const cache={};
+
+/* ---- Parse GPX ---- */
+function parseGPX(text){
+  const doc=new DOMParser().parseFromString(text,'text/xml');
+  if(doc.querySelector('parsererror')) throw new Error('GPX illisible');
+  const nodes=[...doc.querySelectorAll('trkpt, rtept')];
+  if(!nodes.length) throw new Error('Aucun point dans le GPX');
+  return nodes.map(n=>{
+    const lat=parseFloat(n.getAttribute('lat'));
+    const lon=parseFloat(n.getAttribute('lon'));
+    const eleEl=n.querySelector('ele');
+    const ele=eleEl?parseFloat(eleEl.textContent):0;
+    return {lat,lon,ele};
+  }).filter(p=>!isNaN(p.lat)&&!isNaN(p.lon));
+}
+
+/* ---- Distances cumulées ---- */
+function buildCum(){
+  cumDist=[0];
+  for(let i=1;i<pts.length;i++) cumDist[i]=cumDist[i-1]+hav(pts[i-1].lat,pts[i-1].lon,pts[i].lat,pts[i].lon);
+}
+
+/* ---- Point interpolé à une distance donnée ---- */
+function pointAt(dist){
+  const total=cumDist[cumDist.length-1];
+  if(dist<=0) return {...pts[0]};
+  if(dist>=total) return {...pts[pts.length-1]};
+  let i=1; while(cumDist[i]<dist) i++;
+  const seg=cumDist[i]-cumDist[i-1]||1;
+  const f=(dist-cumDist[i-1])/seg;
+  const a=pts[i-1],b=pts[i];
+  return {lat:a.lat+(b.lat-a.lat)*f, lon:a.lon+(b.lon-a.lon)*f, ele:a.ele+(b.ele-a.ele)*f};
+}
+
+/* ---- Construit les checkpoints (départ + chaque heure + arrivée) ---- */
+function buildCheckpoints(startDate,speed){
+  const total=cumDist[cumDist.length-1];
+  const totalH=total/speed;
+  const marks=[];
+  for(let h=0;h<totalH;h++) marks.push(h);
+  marks.push(totalH);                 // arrivée exacte
+  return marks.map((h,idx)=>{
+    const dist=Math.min(speed*h,total);
+    const p=pointAt(dist);
+    const t=new Date(startDate.getTime()+h*3600*1000);
+    return {idx, h, dist, ...p, time:t, kind: idx===0?'start': (h>=totalH?'end':'mid')};
+  });
+}
+
+/* ---- Requête Open-Meteo (cache par coord arrondie) ---- */
+async function fetchWeather(lat,lon){
+  const key=lat.toFixed(2)+','+lon.toFixed(2)+'@'+fcDays;
+  if(cache[key]) return cache[key];
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}`+
+    `&hourly=temperature_2m,precipitation_probability,precipitation,weathercode,windspeed_10m,winddirection_10m,windgusts_10m,cape`+
+    `&timezone=Europe%2FParis&forecast_days=${fcDays}`;
+  const r=await fetch(url);
+  if(!r.ok) throw new Error('Open-Meteo '+r.status);
+  const j=await r.json();
+  cache[key]=j; return j;
+}
+
+/* ---- Trouve l'index horaire le plus proche d'une date ---- */
+function hourIndex(data,date){
+  const t=data.hourly.time;
+  const target=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}T${String(date.getHours()).padStart(2,'0')}:00`;
+  let idx=t.indexOf(target);
+  if(idx>=0) return idx;
+  // fallback : plus proche en temps absolu
+  const tt=date.getTime(); let best=0,bd=1e15;
+  for(let i=0;i<t.length;i++){const d=Math.abs(new Date(t[i]).getTime()-tt);if(d<bd){bd=d;best=i;}}
+  return best;
+}
+
+/* ---- Index horaire strict : -1 si hors prévi (pour le scan de créneaux) ---- */
+function hourIndexStrict(data,date){
+  const t=data.hourly.time;
+  const target=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}T${String(date.getHours()).padStart(2,'0')}:00`;
+  return t.indexOf(target);
+}
+
+/* ---- Score d'un créneau (plus bas = mieux) ---- */
+function slotScore(start, sampleData){
+  let score=0,n=0,worst='green',sumMm=0,maxProb=0,sumWind=0,head=0,capeMax=0;
+  for(const s of sampleData){
+    const t=new Date(start.getTime()+s.h*3600000);
+    const idx=hourIndexStrict(s.data,t);
+    if(idx<0) return null;                       // hors horizon de prévi
+    const H=s.data.hourly;
+    const prob=H.precipitation_probability?.[idx]??0;
+    const mm=H.precipitation?.[idx]??0;
+    const cape=H.cape?.[idx]??0;
+    const wind=H.windspeed_10m?.[idx]??0;
+    const gust=H.windgusts_10m?.[idx]??0;
+    const wdir=H.winddirection_10m?.[idx]??0;
+    const rk=risk(prob,mm,cape,gust);
+    score += rk==='red'?100:rk==='yellow'?25:0;
+    score += mm*15 + prob*0.4 + Math.max(0,wind-22)*1.2 + Math.max(0,gust-38)*1.2 + (cape>200?(cape-200)/8:0);
+    const rel=windRel(wdir,s.bearing); if(rel.key==='face') head++;
+    sumMm+=mm; maxProb=Math.max(maxProb,prob); sumWind+=wind; capeMax=Math.max(capeMax,cape);
+    if(rk==='red')worst='red'; else if(rk==='yellow'&&worst!=='red')worst='yellow';
+    n++;
+  }
+  score += head*6;                               // pénalité vent de face
+  return {score, worst, sumMm:+sumMm.toFixed(1), maxProb, avgWind:Math.round(sumWind/n), head, capeMax:Math.round(capeMax), nFace:head, nPts:n};
+}
+
+/* ---- Scan : meilleur jour/heure pour faire le tracé ---- */
+async function findBestSlot(){
+  if(!pts.length){toast('Charge d\'abord un GPX 📂');return;}
+  const speed=Math.max(8,parseFloat(document.getElementById('speed').value)||25);
+  buildCum();
+  const total=cumDist[cumDist.length-1];
+  const totalH=total/speed;
+
+  const SCAN_DAYS=7;                              // au-delà la prévi pluie/orage n'est plus fiable
+  fcDays=Math.min(16,SCAN_DAYS+1);
+
+  toast('🔮 Scan des créneaux sur 7 jours…');
+  document.getElementById('emptyState').style.display='none';
+  const content=document.getElementById('content'); content.style.display='block';
+  content.innerHTML=`<div class="empty" style="height:auto;padding:40px 20px"><div class="big">🔮</div><h2>Scan en cours…</h2><p>Récupération des prévisions le long du tracé.</p></div>`;
+
+  // échantillons de position (indépendants de l'heure de départ)
+  const sampleData=[];
+  try{
+    for(let h=0; h<=totalH+0.001; h++){
+      const dist=Math.min(speed*h,total);
+      const p=pointAt(dist);
+      const data=await fetchWeather(p.lat,p.lon);
+      sampleData.push({h, p, data, bearing:routeBearing(dist)});
+    }
+  }catch(e){
+    content.innerHTML=`<div class="empty"><div class="big">😬</div><h2>Souci météo</h2><p>${e.message}. Réessaie.</p></div>`;
+    return;
+  }
+
+  // balayage jours × heures de départ
+  const now=Date.now();
+  const today=new Date(); today.setHours(0,0,0,0);
+  const cand=[];
+  for(let d=0; d<SCAN_DAYS; d++){
+    for(let sh=6; sh<=20; sh++){
+      if(sh+totalH>22) continue;                 // pas de fin trop tardive
+      const start=new Date(today); start.setDate(today.getDate()+d); start.setHours(sh,0,0,0);
+      if(start.getTime()<now) continue;          // pas de départ passé
+      const sc=slotScore(start,sampleData);
+      if(!sc) continue;
+      sc.start=start; sc.dayDist=d;
+      sc.score+=d*2;                              // léger bonus aux jours proches (prévi + fiable)
+      cand.push(sc);
+    }
+  }
+  if(!cand.length){ content.innerHTML=`<div class="empty"><div class="big">🤔</div><h2>Aucun créneau</h2><p>Le tracé est peut-être trop long pour finir avant 22h. Réduis-le ou augmente la vitesse.</p></div>`; return; }
+
+  cand.sort((a,b)=>a.score-b.score);
+  renderBestSlots(cand.slice(0,6), speed, total, totalH);
+  toast('✅ '+cand.length+' créneaux analysés');
+}
+
+function renderBestSlots(list, speed, total, totalH){
+  const content=document.getElementById('content');
+  const best=list[0];
+  let html=`
+    <div class="briefing">
+      <div class="bh">🔮 Meilleur créneau — 7 prochains jours</div>
+      <div class="bt">Sur <b>${total.toFixed(0)} km</b> à ${speed} km/h (${Math.floor(totalH)}h${String(Math.round((totalH%1)*60)).padStart(2,'0')}), le créneau le plus clean : <b>${best.start.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</b> au départ de <b>${best.start.getHours()}h</b>.</div>
+      <span class="verdict ${best.worst}">${best.worst==='green'?'🟢 Conditions idéales':best.worst==='yellow'?'🟡 Correct, vigilance':'🔴 Le moins pire'}</span>
+    </div>
+    <div class="sectitle">Classement des créneaux</div>`;
+
+  list.forEach((s,i)=>{
+    const stormChip = s.capeMax>200 ? `<span class="chip warn">⚡ orage</span>` : '';
+    const faceChip = s.nFace>0 ? `<span class="chip">⬆ ${s.nFace} pt face</span>` : '';
+    html+=`
+      <div class="cp ${s.worst} slot" data-date="${s.start.getFullYear()}-${String(s.start.getMonth()+1).padStart(2,'0')}-${String(s.start.getDate()).padStart(2,'0')}" data-hour="${s.start.getHours()}">
+        <div class="dot" style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px">${i===0?'🥇':i+1}</div>
+        <div class="info">
+          <div class="top"><span class="time">${s.start.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'})} · ${s.start.getHours()}h</span><span class="km">→ ${(s.start.getHours()+Math.floor(totalH))}h${String(Math.round((totalH%1)*60)).padStart(2,'0')}</span></div>
+          <div class="place">${s.start.toLocaleDateString('fr-FR',{month:'long'})} · clique pour analyser ce créneau</div>
+          <div class="row2">
+            <span class="chip ${s.maxProb>=40?'warn':''}">💧 ${s.maxProb}%${s.sumMm>=0.1?' · '+s.sumMm+'mm':''}</span>
+            <span class="chip">🌬 ${s.avgWind} moy</span>
+            ${faceChip}${stormChip}
+          </div>
+        </div>
+      </div>`;
+  });
+  html+=`<p style="font-size:11px;color:var(--muted);text-align:center;margin:10px 4px 4px;line-height:1.4">Au-delà de 5-6 jours, pluie et orages sont des tendances, pas des certitudes.</p>`;
+  content.innerHTML=html;
+
+  // clic → charge le créneau dans les champs et lance l'analyse détaillée
+  content.querySelectorAll('.slot').forEach(el=>{
+    el.addEventListener('click',()=>{
+      document.getElementById('startDate').value=el.dataset.date;
+      document.getElementById('startTime').value=String(el.dataset.hour).padStart(2,'0')+':00';
+      analyze();
+    });
+  });
+
+  document.getElementById('elevWrap').style.display='none';
+  document.getElementById('refreshBar').style.display='none';
+}
+async function analyze(){
+  if(!pts.length){toast('Charge d\'abord un GPX 📂');return;}
+  const speed=Math.max(8,parseFloat(document.getElementById('speed').value)||25);
+  const [hh,mm]=document.getElementById('startTime').value.split(':').map(Number);
+  const dVal=document.getElementById('startDate').value;
+  const start=dVal?new Date(dVal+'T00:00:00'):new Date();
+  start.setHours(hh||8,mm||0,0,0);
+
+  // jours de prévi à demander : d'aujourd'hui jusqu'au lendemain du départ (cap 16)
+  const today=new Date(); today.setHours(0,0,0,0);
+  const dayStart=new Date(start); dayStart.setHours(0,0,0,0);
+  const diff=Math.round((dayStart-today)/86400000);
+  if(diff<0){ toast('⚠️ Date passée — choisis aujourd\'hui ou plus tard'); return; }
+  fcDays=Math.min(16,Math.max(2,diff+2));
+
+  buildCum();
+  checkpoints=buildCheckpoints(start,speed);
+
+  // Récup météo par checkpoint
+  try{
+    for(const cp of checkpoints){
+      const data=await fetchWeather(cp.lat,cp.lon);
+      const i=hourIndex(data,cp.time);
+      const H=data.hourly;
+      cp.temp=Math.round(H.temperature_2m?.[i]??0);
+      cp.prob=Math.round(H.precipitation_probability?.[i]??0);
+      cp.mm=H.precipitation?.[i]??0;
+      cp.code=H.weathercode?.[i]??3;
+      cp.wind=Math.round(H.windspeed_10m?.[i]??0);
+      cp.wdir=H.winddirection_10m?.[i]??0;
+      cp.gust=Math.round(H.windgusts_10m?.[i]??0);
+      cp.cape=Math.round(H.cape?.[i]??0);
+      cp.town=nearestTown(cp.lat,cp.lon);
+      cp.bearing=routeBearing(cp.dist);
+      cp.rel=windRel(cp.wdir,cp.bearing);
+      cp.risk=risk(cp.prob,cp.mm,cp.cape,cp.gust);
+    }
+  }catch(e){
+    document.getElementById('content').innerHTML=
+      `<div class="empty"><div class="big">😬</div><h2>Souci météo</h2><p>${e.message}. Vérifie ta connexion et réessaie.</p></div>`;
+    document.getElementById('emptyState').style.display='none';
+    document.getElementById('content').style.display='block';
+    return;
+  }
+
+  drawMap();
+  renderSidebar(speed);
+  drawElevation();
+  scheduleRefresh();
+  toast('Analyse à jour ✅');
+}
+
+/* ---- Carte ---- */
+function makeDivIcon(html,cls,size){return L.divIcon({className:'',html,iconSize:[size,size],iconAnchor:[size/2,size/2]});}
+
+function drawMap(){
+  if(layer) layer.remove();
+  layer=L.layerGroup().addTo(map);
+
+  const latlngs=pts.map(p=>[p.lat,p.lon]);
+  routeLine=L.polyline(latlngs,{color:dark?'#f0eef5':'#1c1b18',weight:4,opacity:.9,lineJoin:'round'}).addTo(layer);
+
+  // flèches de direction (~8) le long du tracé
+  const total=cumDist[cumDist.length-1], n=8;
+  for(let k=1;k<n;k++){
+    const d=total*k/n; const p=pointAt(d); const p2=pointAt(Math.min(d+0.15,total));
+    const ang=Math.atan2(p2.lon-p.lon,p2.lat-p.lat)*180/Math.PI;
+    const html=`<div class="ds-diramt"><svg viewBox="0 0 16 16" style="transform:rotate(${ang}deg)"><path d="M8 1l4 8H9v6H7V9H4l4-8z" fill="var(--blue)" opacity=".85"/></svg></div>`;
+    L.marker([p.lat,p.lon],{icon:makeDivIcon(html,'',16),interactive:false}).addTo(layer);
+  }
+
+  // checkpoints
+  checkpoints.forEach(cp=>{
+    let html;
+    if(cp.kind==='start') html=`<div class="ds-flag">🚩</div>`;
+    else if(cp.kind==='end') html=`<div class="ds-flag">🏁</div>`;
+    else html=`<div class="ds-marker ${cp.risk}" style="width:38px;height:38px;position:relative">${wIcon(cp.code)}<div class="wind-badge" title="vent ${cp.rel.txt}">${windArrow(cp.wdir,cp.wind,15)}</div></div>`;
+    const size=cp.kind==='mid'?38:30;
+    L.marker([cp.lat,cp.lon],{icon:makeDivIcon(html,'',size),zIndexOffset:cp.kind==='mid'?0:500}).addTo(layer)
+     .bindTooltip(`${cp.time.getHours()}h • ${cp.town}<br>${cp.temp}° · pluie ${cp.prob}%<br>vent ${cp.wind} km/h de ${card(cp.wdir)} → <b>${cp.rel.txt}</b>`,{direction:'top'});
+  });
+
+  map.fitBounds(L.latLngBounds(latlngs).pad(0.15));
+}
+
+/* ---- Sidebar ---- */
+function renderSidebar(speed){
+  document.getElementById('emptyState').style.display='none';
+  const content=document.getElementById('content'); content.style.display='block';
+  const total=cumDist[cumDist.length-1];
+  const totalH=total/speed;
+  const ele0=pts.reduce((s,p,i)=>i>0&&p.ele>pts[i-1].ele?s+(p.ele-pts[i-1].ele):s,0);
+  const arrival=checkpoints[checkpoints.length-1].time;
+
+  // verdict global = pire risque
+  const order={green:0,yellow:1,red:2};
+  let worst='green'; checkpoints.forEach(c=>{if(order[c.risk]>order[worst])worst=c.risk;});
+
+  const brief=buildBriefing(speed,arrival,worst);
+
+  let html=`
+    <div class="briefing">
+      <div class="bh">Briefing DS — ${checkpoints[0].time.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})} · ${checkpoints[0].time.getHours()}h${String(checkpoints[0].time.getMinutes()).padStart(2,'0')} départ</div>
+      <div class="bt">${brief}</div>
+      <span class="verdict ${worst}">${worst==='green'?'🟢 Feu vert':worst==='yellow'?'🟡 Vigilance':'🔴 Sortie risquée'}</span>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="v">${total.toFixed(0)}</div><div class="l">km</div></div>
+      <div class="stat"><div class="v">${ele0.toFixed(0)}</div><div class="l">D+ m</div></div>
+      <div class="stat"><div class="v">${Math.floor(totalH)}h${String(Math.round((totalH%1)*60)).padStart(2,'0')}</div><div class="l">durée</div></div>
+      <div class="stat"><div class="v">${arrival.getHours()}h${String(arrival.getMinutes()).padStart(2,'0')}</div><div class="l">retour</div></div>
+    </div>
+    <div class="sectitle">Checkpoints horaires</div>`;
+
+  checkpoints.forEach(cp=>{
+    const stormChip = cp.cape>200 ? `<span class="chip warn">⚡ CAPE ${cp.cape}</span>` : '';
+    const rainChip = `<span class="chip ${cp.prob>=40?'warn':''}">💧 ${cp.prob}%${cp.mm>=0.1?' · '+cp.mm.toFixed(1)+'mm':''}</span>`;
+    const label = cp.kind==='start'?'🚩 Départ':cp.kind==='end'?'🏁 Arrivée':`Km ${cp.dist.toFixed(0)}`;
+    html+=`
+      <div class="cp ${cp.risk}" data-idx="${cp.idx}">
+        <div class="dot">${cp.kind==='mid'?wIcon(cp.code):`<div class="ds-flag" style="font-size:22px">${cp.kind==='start'?'🚩':'🏁'}</div>`}</div>
+        <div class="info">
+          <div class="top"><span class="time">${cp.time.getHours()}h${String(cp.time.getMinutes()).padStart(2,'0')}</span><span class="km">${label}</span></div>
+          <div class="place">${cp.town} · ${cp.temp}°</div>
+          <div class="row2">
+            ${rainChip}
+            <span class="chip">${windArrow(cp.wdir,cp.wind,13)} ${cp.wind}${cp.gust>cp.wind+10?'/'+cp.gust:''} <b>${cp.rel.ico} ${cp.rel.txt}</b></span>
+            ${stormChip}
+          </div>
+        </div>
+      </div>`;
+  });
+  content.innerHTML=html;
+
+  // hover → cycliste sur la carte
+  content.querySelectorAll('.cp').forEach(el=>{
+    const cp=checkpoints[+el.dataset.idx];
+    el.addEventListener('mouseenter',()=>showRider(cp,el));
+    el.addEventListener('mouseleave',()=>hideRider(el));
+  });
+
+  document.getElementById('elevWrap').style.display='block';
+  document.getElementById('refreshBar').style.display='flex';
+}
+
+/* ---- Cycliste au survol (sans toucher aux transforms Leaflet) ---- */
+function showRider(cp,el){
+  hideRider();
+  el.classList.add('hot');
+  const html=`<div class="ds-rider ${cp.risk}">🚴</div>`;
+  riderMarker=L.marker([cp.lat,cp.lon],{icon:makeDivIcon(html,'',40),zIndexOffset:1000,interactive:false}).addTo(map);
+  if(!map.getBounds().pad(-0.12).contains([cp.lat,cp.lon])) map.panTo([cp.lat,cp.lon],{animate:true,duration:.5});
+}
+function hideRider(el){
+  if(riderMarker){riderMarker.remove();riderMarker=null;}
+  document.querySelectorAll('.cp.hot').forEach(c=>c.classList.remove('hot'));
+}
+
+/* ---- Briefing texte ---- */
+function buildBriefing(speed,arrival,worst){
+  const start=checkpoints[0], end=checkpoints[checkpoints.length-1];
+  const startTxt = start.prob>=40?`ciel menaçant (${start.prob}% de pluie)`:start.prob>=20?`couvert mais sec`:`conditions clean`;
+  // premier point critique
+  const crit=checkpoints.find(c=>c.risk!=='green');
+  let critTxt;
+  if(!crit) critTxt=`Aucun point chaud sur le parcours, le ciel te laisse tranquille du début à la fin.`;
+  else{
+    const why = crit.cape>200?`risque d'orage (CAPE ${crit.cape})`: crit.gust>50?`rafales à ${crit.gust} km/h`:`${crit.prob}% de pluie`;
+    critTxt=`Le point chaud : <b>${crit.town}</b> vers <b>${crit.time.getHours()}h</b> (km ${crit.dist.toFixed(0)}) — ${why}.`;
+  }
+  const gear = worst==='red'?`<b>K-way obligatoire</b>, et garde un œil sur le ciel côté Vosges.`
+            : worst==='yellow'?`Coupe-vent dans la poche, on devrait passer entre les gouttes.`
+            : `Pas besoin de te charger, sors léger.`;
+  const arrTxt = end.prob>=40?`Retour humide (${end.prob}%), prévois de quoi te couvrir sur la fin.`:`Retour au sec vers ${arrival.getHours()}h${String(arrival.getMinutes()).padStart(2,'0')}.`;
+  return `Départ avec ${startTxt}. ${critTxt} ${gear} ${arrTxt}`;
+}
+
+/* ---- Profil altimétrique ---- */
+function drawElevation(){
+  const cv=document.getElementById('elev');
+  const dpr=window.devicePixelRatio||1;
+  const w=cv.clientWidth, h=72;
+  cv.width=w*dpr; cv.height=h*dpr;
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  requestAnimationFrame(()=>{
+    ctx.clearRect(0,0,w,h);
+    const eles=pts.map(p=>p.ele);
+    const mn=Math.min(...eles), mx=Math.max(...eles), rng=(mx-mn)||1;
+    const total=cumDist[cumDist.length-1];
+    const X=d=>d/total*w, Y=e=>h-6-((e-mn)/rng)*(h-14);
+    // remplissage
+    ctx.beginPath(); ctx.moveTo(0,h);
+    pts.forEach((p,i)=>ctx.lineTo(X(cumDist[i]),Y(p.ele)));
+    ctx.lineTo(w,h); ctx.closePath();
+    const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'rgba(47,111,216,.35)'); g.addColorStop(1,'rgba(47,111,216,.04)');
+    ctx.fillStyle=g; ctx.fill();
+    // ligne
+    ctx.beginPath(); pts.forEach((p,i)=>{const x=X(cumDist[i]),y=Y(p.ele); i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+    ctx.strokeStyle='#2f6fd8'; ctx.lineWidth=1.5; ctx.stroke();
+    // points checkpoints
+    const cmap={green:'#2e9e3f',yellow:'#e2890b',red:'#d8392f'};
+    checkpoints.forEach(cp=>{
+      const x=X(cp.dist), y=Y(cp.ele);
+      ctx.beginPath(); ctx.arc(x,y,3.5,0,7); ctx.fillStyle=cmap[cp.risk]||'#1c1b18'; ctx.fill();
+      ctx.lineWidth=1.5; ctx.strokeStyle='#fff'; ctx.stroke();
+    });
+  });
+}
+
+/* ---- Refresh horaire ---- */
+function scheduleRefresh(){
+  if(refreshTimer) clearInterval(refreshTimer);
+  const next=new Date(Date.now()+3600*1000);
+  document.getElementById('nextRefresh').textContent='Prochaine maj '+next.getHours()+'h'+String(next.getMinutes()).padStart(2,'0');
+  refreshTimer=setInterval(()=>{ for(const k in cache) delete cache[k]; analyze(); }, 3600*1000);
+}
+
+/* ---- Toast ---- */
+let toastT;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
+
+/* ---- Dark mode ---- */
+function toggleDark(){
+  dark=!dark;
+  document.body.classList.toggle('dark',dark);
+  document.getElementById('darkBtn').textContent=dark?'☀️':'🌙';
+  const url=dark?'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                :'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+  if(tile) tile.setUrl(url);
+  if(routeLine) routeLine.setStyle({color:dark?'#f0eef5':'#1c1b18'});
+}
+
+/* ---- Export PNG : récap détaillé prêt à partager ---- */
+/* ---- Rendu carte maison sur canvas (projection Web Mercator) ----
+   Évite le bug html2canvas/Leaflet : on dessine tuiles + tracé + marqueurs
+   nous-mêmes, donc tout est parfaitement aligné et cadré sur le tracé. ---- */
+function lngX(lng,z){return (lng+180)/360*Math.pow(2,z)*256;}
+function latYpx(lat,z){const s=Math.sin(lat*Math.PI/180);return (0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*Math.pow(2,z)*256;}
+function wmoEmoji(c){
+  if(c===0)return '☀️'; if(c<=2)return '⛅'; if(c===3)return '☁️';
+  if(c>=45&&c<=48)return '🌫️';
+  if((c>=51&&c<=67)||(c>=80&&c<=82))return '🌧️';
+  if((c>=71&&c<=77)||(c>=85&&c<=86))return '🌨️';
+  if(c>=95)return '⛈️'; return '☁️';
+}
+function drawArrow(ctx,x,y,ang,size,color){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(ang);
+  ctx.beginPath(); ctx.moveTo(size,0); ctx.lineTo(-size*0.75,size*0.7); ctx.lineTo(-size*0.75,-size*0.7); ctx.closePath();
+  ctx.fillStyle=color; ctx.fill(); ctx.restore();
+}
+
+async function buildMapImage(){
+  const S=2, padPx=70, targetMax=1024;
+  let minLat=90,maxLat=-90,minLng=180,maxLng=-180;
+  for(const p of pts){ if(p.lat<minLat)minLat=p.lat; if(p.lat>maxLat)maxLat=p.lat; if(p.lon<minLng)minLng=p.lon; if(p.lon>maxLng)maxLng=p.lon; }
+
+  let zoom=13;
+  for(; zoom>=8; zoom--){
+    const w=Math.abs(lngX(maxLng,zoom)-lngX(minLng,zoom));
+    const h=Math.abs(latYpx(minLat,zoom)-latYpx(maxLat,zoom));
+    if(w+2*padPx<=targetMax && h+2*padPx<=targetMax) break;
+  }
+  const xMin=lngX(minLng,zoom), xMax=lngX(maxLng,zoom);
+  const yTop=latYpx(maxLat,zoom), yBot=latYpx(minLat,zoom);
+  const originX=Math.min(xMin,xMax)-padPx, originY=yTop-padPx;
+  const cw=Math.abs(xMax-xMin)+2*padPx, ch=Math.abs(yBot-yTop)+2*padPx;
+
+  const cv=document.createElement('canvas'); cv.width=Math.round(cw*S); cv.height=Math.round(ch*S);
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle=dark?'#0f0f14':'#dfe6e2'; ctx.fillRect(0,0,cv.width,cv.height);
+
+  // tuiles
+  const n=Math.pow(2,zoom);
+  const style=dark?'dark_all':'light_all';
+  const txMin=Math.floor(originX/256), txMax=Math.floor((originX+cw)/256);
+  const tyMin=Math.floor(originY/256), tyMax=Math.floor((originY+ch)/256);
+  const jobs=[];
+  for(let tx=txMin;tx<=txMax;tx++) for(let ty=tyMin;ty<=tyMax;ty++){
+    if(ty<0||ty>=n) continue;
+    const txx=((tx%n)+n)%n;
+    const sub=['a','b','c','d'][Math.abs(tx+ty)%4];
+    const url=`https://${sub}.basemaps.cartocdn.com/${style}/${zoom}/${txx}/${ty}@2x.png`;
+    jobs.push(new Promise(res=>{
+      const img=new Image(); img.crossOrigin='anonymous';
+      img.onload=()=>{ ctx.drawImage(img,(tx*256-originX)*S,(ty*256-originY)*S,256*S,256*S); res(); };
+      img.onerror=()=>res();
+      img.src=url;
+    }));
+  }
+  await Promise.all(jobs);
+
+  const PX=p=>(lngX(p.lon,zoom)-originX)*S;
+  const PY=p=>(latYpx(p.lat,zoom)-originY)*S;
+
+  // tracé
+  ctx.beginPath();
+  pts.forEach((p,i)=>{const x=PX(p),y=PY(p); i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+  ctx.strokeStyle=dark?'#f0eef5':'#1c1b18'; ctx.lineWidth=4*S; ctx.lineJoin='round'; ctx.lineCap='round'; ctx.stroke();
+
+  // flèches de direction
+  const total=cumDist[cumDist.length-1];
+  for(let k=1;k<8;k++){
+    const d=total*k/8, a=pointAt(d), b=pointAt(Math.min(d+0.15,total));
+    drawArrow(ctx,PX(a),PY(a),Math.atan2(PY(b)-PY(a),PX(b)-PX(a)),7*S,'rgba(47,111,216,.9)');
+  }
+
+  // marqueurs checkpoints
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  const rc={green:['#e6f4e6','#2e9e3f'],yellow:['#fbedd1','#e2890b'],red:['#fbe0dd','#d8392f']};
+  checkpoints.forEach(cp=>{
+    const x=PX(cp), y=PY(cp);
+    if(cp.kind==='mid'){
+      const col=rc[cp.risk]||rc.green;
+      ctx.beginPath(); ctx.arc(x,y,18*S,0,7); ctx.fillStyle=col[0]; ctx.fill();
+      ctx.lineWidth=2.5*S; ctx.strokeStyle=col[1]; ctx.stroke();
+      ctx.font=`${19*S}px sans-serif`; ctx.fillText(wmoEmoji(cp.code),x,y+1*S);
+      // pastille de vent
+      const wx=x+15*S, wy=y+15*S;
+      ctx.beginPath(); ctx.arc(wx,wy,9*S,0,7); ctx.fillStyle='#fff'; ctx.fill(); ctx.lineWidth=1.2*S; ctx.strokeStyle='#e4e0d6'; ctx.stroke();
+      const wc=cp.wind>35?'#d8392f':cp.wind>20?'#e2890b':'#2e9e3f';
+      const b=(cp.wdir+180)*Math.PI/180;
+      drawArrow(ctx,wx,wy,Math.atan2(-Math.cos(b),Math.sin(b)),6*S,wc);
+    }else{
+      ctx.font=`${26*S}px sans-serif`;
+      ctx.fillText(cp.kind==='start'?'🚩':'🏁',x,y);
+    }
+  });
+  return cv.toDataURL('image/png');
+}
+
+async function exportPng(){
+  if(!checkpoints.length){ toast('Lance d\'abord une analyse 📊'); return; }
+  if(typeof html2canvas==='undefined'){ toast('⚠️ Module export non chargé (connexion ?)'); return; }
+  toast('🎨 Génération de l\'image…');
+
+  // carte rendue maison (alignement parfait tuiles/tracé/marqueurs, cadrage serré sur le tracé)
+  let mapImg='';
+  try{ mapImg=await buildMapImage(); }
+  catch(e){ /* si le rendu carte échoue, on continue sans */ }
+
+  const c0=checkpoints[0], cN=checkpoints[checkpoints.length-1];
+  const total=cumDist[cumDist.length-1];
+  const totalH=cN.h||(total/25);
+  const speed=total/totalH||25;
+  const ele0=pts.reduce((s,p,i)=>i>0&&p.ele>pts[i-1].ele?s+(p.ele-pts[i-1].ele):s,0);
+  const order={green:0,yellow:1,red:2}; let worst='green'; checkpoints.forEach(c=>{if(order[c.risk]>order[worst])worst=c.risk;});
+  const vTxt=worst==='green'?'🟢 Feu vert':worst==='yellow'?'🟡 Vigilance':'🔴 Sortie risquée';
+  const vCol=worst==='green'?'#2e9e3f':worst==='yellow'?'#e2890b':'#d8392f';
+
+  // carte récap hors-écran (palette claire fixe pour un partage propre)
+  const card=document.createElement('div');
+  card.style.cssText='position:fixed;left:-9999px;top:0;width:620px;background:#f3f1ea;color:#1c1b18;'+
+    'font-family:Outfit,sans-serif;padding:28px;box-sizing:border-box;';
+  let rows='';
+  checkpoints.forEach(cp=>{
+    const rc={green:'#e6f4e6',yellow:'#fbedd1',red:'#fbe0dd'}[cp.risk];
+    const bc={green:'#2e9e3f',yellow:'#e2890b',red:'#d8392f'}[cp.risk];
+    const label=cp.kind==='start'?'🚩 Départ':cp.kind==='end'?'🏁 Arrivée':'Km '+cp.dist.toFixed(0);
+    rows+=`<tr>
+      <td style="padding:9px 8px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;white-space:nowrap">${cp.time.getHours()}h${String(cp.time.getMinutes()).padStart(2,'0')}</td>
+      <td style="padding:9px 8px;font-size:13px">${cp.town}<div style="font-size:11px;color:#7a766d">${label}</div></td>
+      <td style="padding:9px 8px;font-family:'JetBrains Mono',monospace;font-size:13px;text-align:center">${cp.temp}°</td>
+      <td style="padding:9px 8px;font-family:'JetBrains Mono',monospace;font-size:13px;text-align:center;color:${cp.prob>=40?'#d8392f':'#1c1b18'}">${cp.prob}%</td>
+      <td style="padding:9px 8px;font-family:'JetBrains Mono',monospace;font-size:13px;text-align:center">${cp.wind} ${cp.rel.ico}</td>
+      <td style="padding:9px 8px;text-align:center"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:${rc};border:2px solid ${bc}"></span></td>
+    </tr>`;
+  });
+  card.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div style="font-weight:800;font-size:24px;letter-spacing:-.6px">🚴 DS Météo</div>
+      <div style="font-size:13px;color:#7a766d;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Briefing sortie</div>
+    </div>
+    <div style="font-size:15px;color:#7a766d;margin-bottom:16px;text-transform:capitalize">${c0.time.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} · départ ${c0.time.getHours()}h${String(c0.time.getMinutes()).padStart(2,'0')}</div>
+    ${mapImg?`<img src="${mapImg}" style="width:100%;display:block;border-radius:12px;border:1px solid #e4e0d6;margin-bottom:16px">`:''}
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      ${[['Distance',total.toFixed(0)+' km'],['Dénivelé',ele0.toFixed(0)+' m'],['Retour',cN.time.getHours()+'h'+String(cN.time.getMinutes()).padStart(2,'0')]].map(s=>
+        `<div style="flex:1;background:#fff;border:1px solid #e4e0d6;border-radius:11px;padding:11px;text-align:center"><div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700">${s[1]}</div><div style="font-size:10px;color:#7a766d;text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-top:2px">${s[0]}</div></div>`).join('')}
+    </div>
+    <div style="background:#1c1b18;color:#f3f1ea;border-radius:14px;padding:16px;margin-bottom:16px">
+      <div style="font-size:14px;line-height:1.5">${buildBriefing(speed, cN.time, worst)}</div>
+      <div style="display:inline-block;margin-top:12px;background:${vCol};color:#fff;font-weight:700;font-size:13px;padding:7px 13px;border-radius:999px">${vTxt}</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #e4e0d6;border-radius:12px;overflow:hidden">
+      <thead><tr style="background:#ece8df;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#7a766d;text-align:left">
+        <th style="padding:8px">Heure</th><th style="padding:8px">Lieu</th><th style="padding:8px;text-align:center">T°</th><th style="padding:8px;text-align:center">Pluie</th><th style="padding:8px;text-align:center">Vent</th><th style="padding:8px;text-align:center">Risk</th>
+      </tr></thead><tbody>${rows}</tbody>
+    </table>
+    <div style="margin-top:14px;font-size:11px;color:#7a766d;text-align:center">Vent : ⬆ face · ⬇ dos · ⟷ travers — Généré avec DS Météo · données Open-Meteo</div>`;
+  document.body.appendChild(card);
+
+  try{
+    const canvas=await html2canvas(card,{scale:2,backgroundColor:'#f3f1ea',useCORS:true});
+    const link=document.createElement('a');
+    const d=c0.time;
+    link.download=`ds-meteo_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${d.getHours()}h.png`;
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+    toast('✅ Image exportée');
+  }catch(e){ toast('😬 Export raté : '+e.message); }
+  finally{ card.remove(); }
+}
+
+/* ---- Chargement d'un fichier GPX (input ou drag&drop) ---- */
+function loadGpx(f){
+  if(!f) return;
+  if(!/\.gpx$/i.test(f.name)){ toast('⚠️ Fichier .gpx attendu'); return; }
+  document.getElementById('fname').textContent=f.name;
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    try{
+      pts=parseGPX(ev.target.result);
+      toast('GPX chargé : '+pts.length+' points 🚴');
+      analyze();                       // lance l'analyse direct
+    }catch(err){ toast('⚠️ '+err.message); }
+  };
+  rd.onerror=()=>toast('⚠️ Lecture du fichier impossible');
+  rd.readAsText(f);
+}
+
+/* ---- Init ---- */
+function init(){
+  // sélecteur de date : aujourd'hui par défaut, bornes = aujourd'hui → +15 jours
+  const di=document.getElementById('startDate');
+  const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const today=new Date(), maxD=new Date(Date.now()+15*86400000);
+  di.value=fmt(today); di.min=fmt(today); di.max=fmt(maxD);
+
+  map=L.map('map',{zoomControl:true,attributionControl:false}).setView([48.58,7.6],11);
+  tile=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,crossOrigin:true}).addTo(map);
+
+  document.getElementById('gpxInput').addEventListener('change',e=>loadGpx(e.target.files[0]));
+
+  // drag & drop sur toute la fenêtre
+  const dz=document.getElementById('dropzone');
+  let dragDepth=0;
+  const hasFiles=e=>e.dataTransfer&&[...e.dataTransfer.types||[]].includes('Files');
+  window.addEventListener('dragenter',e=>{ if(hasFiles(e)){ e.preventDefault(); dragDepth++; dz.classList.add('show'); }});
+  window.addEventListener('dragover',e=>{ if(hasFiles(e)) e.preventDefault(); });
+  window.addEventListener('dragleave',e=>{ if(hasFiles(e)){ dragDepth--; if(dragDepth<=0){ dragDepth=0; dz.classList.remove('show'); } }});
+  window.addEventListener('drop',e=>{
+    e.preventDefault(); dragDepth=0; dz.classList.remove('show');
+    const files=[...(e.dataTransfer?.files||[])];
+    const f=files.find(x=>/\.gpx$/i.test(x.name))||files[0];
+    loadGpx(f);
+  });
+  document.getElementById('goBtn').addEventListener('click',analyze);
+  document.getElementById('bestBtn').addEventListener('click',findBestSlot);
+  document.getElementById('darkBtn').addEventListener('click',toggleDark);
+  document.getElementById('exportBtn').addEventListener('click',exportPng);
+  window.addEventListener('resize',()=>{ if(checkpoints.length) drawElevation(); });
+}
+init();
+</script>
+</body>
+</html>
