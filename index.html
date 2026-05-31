@@ -4,10 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DS Météo — Coach météo cycliste</title>
+<meta name="description" content="Importez votre tracé GPX. DS Météo analyse le vent, la pluie et les orages tout au long du parcours, et identifie le meilleur créneau des sept prochains jours.">
+<meta name="theme-color" content="#1c1b18">
+<meta property="og:title" content="DS Météo — l'analyse météo de votre parcours">
+<meta property="og:description" content="Importez un tracé GPX et obtenez une analyse météo détaillée : vent, pluie, orages, et le meilleur créneau sur sept jours.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9A%B4%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#f3f1ea; --panel:#fffdf8; --ink:#1c1b18; --muted:#7a766d;
@@ -50,11 +56,15 @@
   .btn:active{transform:translateY(0)}
   .btn.ghost{background:#fff;color:var(--ink)}
   .iconbtn{
-    width:40px;height:40px;flex-shrink:0;cursor:pointer;font-size:17px;
+    height:40px;min-width:40px;flex-shrink:0;cursor:pointer;font-size:17px;gap:7px;
+    padding:0 10px;
     border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);
     display:flex;align-items:center;justify-content:center;transition:transform .12s, box-shadow .12s, background .2s;
   }
   .iconbtn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(28,27,24,.18)}
+  .iconbtn svg{display:block}
+  .iconbtn-label{font-family:'Outfit',sans-serif;font-weight:600;font-size:13px;letter-spacing:.2px}
+  @media (max-width:980px){.iconbtn-label{display:none}}
 
   /* ---------- DARK MODE ---------- */
   body.dark{
@@ -193,9 +203,171 @@
     #sidebar{top:auto;left:0;right:0;bottom:0;width:auto;height:46%;border-left:none;border-top:1px solid var(--line)}
     #topbar{flex-wrap:wrap;height:auto;padding:10px 14px;gap:10px}
   }
+
+  /* ============================================================
+     LANDING PAGE
+     ============================================================ */
+  #landing{position:fixed;inset:0;z-index:6000;overflow-y:auto;overflow-x:hidden;
+    background:#0e1116;color:#f4f1ea;font-family:'Outfit',sans-serif;
+    opacity:1;transition:opacity .6s ease, transform .6s ease}
+  #landing.leaving{opacity:0;transform:scale(1.04);pointer-events:none}
+  #landing *{box-sizing:border-box}
+
+  /* animated sky background */
+  .sky{position:fixed;inset:0;z-index:0;overflow:hidden;background:
+    radial-gradient(120% 80% at 80% -10%, #2a3550 0%, transparent 55%),
+    radial-gradient(100% 70% at 10% 110%, #1a2d2a 0%, transparent 50%),
+    linear-gradient(180deg,#0e1116 0%, #11161e 60%, #0e1116 100%)}
+  .sky .glow{position:absolute;border-radius:50%;filter:blur(80px);opacity:.5;animation:drift 24s ease-in-out infinite}
+  .sky .g1{width:520px;height:520px;background:#3a5cff;top:-120px;left:-80px;animation-delay:0s}
+  .sky .g2{width:460px;height:460px;background:#1fb074;bottom:-140px;right:-60px;animation-delay:-8s}
+  .sky .g3{width:380px;height:380px;background:#e2890b;top:35%;left:55%;opacity:.32;animation-delay:-15s}
+  @keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,30px) scale(1.08)}66%{transform:translate(-30px,20px) scale(.95)}}
+  .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  .ld-wrap{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:0 28px}
+
+  /* nav */
+  .ld-nav{display:flex;align-items:center;justify-content:space-between;padding:26px 0}
+  .ld-logo{display:flex;align-items:center;gap:9px;font-family:'Bricolage Grotesque';font-weight:800;font-size:21px;letter-spacing:-.5px}
+  .ld-logo .b{font-size:24px}
+  .ld-nav .pill{font-size:12px;font-weight:600;color:#a8b0bd;border:1px solid #2a3340;padding:7px 14px;border-radius:999px;display:flex;align-items:center;gap:7px}
+  .ld-nav .pill .dot{width:7px;height:7px;border-radius:50%;background:#1fb074;box-shadow:0 0 8px #1fb074;animation:livepulse 2s infinite}
+
+  /* hero */
+  .hero{padding:clamp(40px,9vh,110px) 0 60px;max-width:880px}
+  .hero .eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:12.5px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#7fd0a8;margin-bottom:26px;
+    opacity:0;animation:rise .7s .05s ease forwards}
+  .hero h1{font-family:'Bricolage Grotesque';font-weight:800;letter-spacing:-2.5px;line-height:.94;
+    font-size:clamp(52px,9.5vw,118px);margin:0 0 28px}
+  .hero h1 span{display:block;opacity:0;animation:rise .8s ease forwards}
+  .hero h1 .l1{animation-delay:.12s}
+  .hero h1 .l2{animation-delay:.24s;color:transparent;-webkit-text-stroke:1.6px #f4f1ea;text-stroke:1.6px #f4f1ea}
+  .hero h1 .l3{animation-delay:.36s;background:linear-gradient(100deg,#3a5cff,#1fb074 60%,#e2890b);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p.sub{font-size:clamp(17px,2.1vw,21px);line-height:1.55;color:#c3c9d4;max-width:560px;font-weight:300;
+    opacity:0;animation:rise .8s .48s ease forwards}
+  .hero p.sub b{font-weight:600;color:#f4f1ea}
+
+  .cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:40px;opacity:0;animation:rise .8s .6s ease forwards}
+  .cta{font-family:'Outfit';font-weight:700;font-size:16px;cursor:pointer;border:none;
+    padding:16px 30px;border-radius:14px;background:#f4f1ea;color:#0e1116;display:inline-flex;align-items:center;gap:10px;
+    transition:transform .15s ease, box-shadow .15s ease}
+  .cta:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(244,241,234,.22)}
+  .cta .arr{transition:transform .2s ease}
+  .cta:hover .arr{transform:translateX(4px)}
+  .cta.ghost{background:transparent;color:#f4f1ea;border:1px solid #333d4c}
+  .cta.ghost:hover{border-color:#f4f1ea;box-shadow:none}
+  .cta-hint{font-size:13px;color:#808996}
+
+  @keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
+
+  /* floating weather chips behind hero */
+  .float{position:absolute;z-index:1;font-family:'JetBrains Mono';font-weight:700;font-size:13px;
+    background:rgba(255,255,255,.05);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.09);
+    border-radius:13px;padding:11px 15px;display:flex;align-items:center;gap:9px;color:#dfe4ec;
+    box-shadow:0 16px 40px rgba(0,0,0,.3);animation:bob 6s ease-in-out infinite}
+  .float .ico{font-size:18px}
+  .float.f1{top:14%;right:4%;animation-delay:0s}
+  .float.f2{top:40%;right:11%;animation-delay:-2s}
+  .float.f3{top:64%;right:2%;animation-delay:-4s}
+  .float small{color:#8c96a4;font-weight:500}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-14px) rotate(1deg)}}
+  @media (max-width:820px){.float{display:none}}
+
+  /* feature cards */
+  .ld-section{padding:30px 0 20px}
+  .ld-kicker{font-family:'JetBrains Mono';font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#7fd0a8;margin-bottom:30px;display:flex;align-items:center;gap:12px}
+  .ld-kicker::before{content:"";width:34px;height:1px;background:#3a4654}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+  .card{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:26px;
+    transition:transform .2s ease, border-color .2s ease, background .2s ease}
+  .card:hover{transform:translateY(-4px);border-color:rgba(127,208,168,.4);background:rgba(255,255,255,.06)}
+  .card .ic{font-size:30px;margin-bottom:16px;display:block}
+  .card h3{font-family:'Bricolage Grotesque';font-weight:700;font-size:19px;margin:0 0 9px;letter-spacing:-.4px}
+  .card p{font-size:14.5px;line-height:1.55;color:#aab2bf;margin:0;font-weight:300}
+
+  /* steps */
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:8px}
+  .step{position:relative;padding:24px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06)}
+  .step .num{font-family:'Bricolage Grotesque';font-weight:800;font-size:42px;line-height:1;color:transparent;-webkit-text-stroke:1.4px #46525f;margin-bottom:12px}
+  .step h4{font-size:16px;font-weight:600;margin:0 0 6px}
+  .step p{font-size:13.5px;color:#9aa3b0;margin:0;line-height:1.5;font-weight:300}
+
+  /* footer cta */
+  .ld-final{text-align:center;padding:80px 0 40px}
+  .ld-final h2{font-family:'Bricolage Grotesque';font-weight:800;font-size:clamp(32px,5vw,56px);letter-spacing:-1.5px;margin:0 0 14px}
+  .ld-final p{color:#aab2bf;font-size:16px;margin:0 0 32px;font-weight:300}
+  .ld-foot{text-align:center;padding:30px 0 40px;color:#5d6672;font-size:12.5px;border-top:1px solid rgba(255,255,255,.06);margin-top:40px}
+  .ld-foot b{color:#8c96a4;font-weight:600}
+
+  .scroll-hint{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);color:#6b7480;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+    display:flex;flex-direction:column;align-items:center;gap:8px;animation:bob 2.4s ease-in-out infinite}
+  .scroll-hint .ch{width:18px;height:18px;border-right:2px solid #6b7480;border-bottom:2px solid #6b7480;transform:rotate(45deg)}
+  @media (max-width:820px){.scroll-hint{display:none}}
 </style>
 </head>
 <body>
+
+<div id="landing">
+  <div class="sky"><div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div></div>
+  <div class="grain"></div>
+
+  <div class="ld-wrap">
+    <nav class="ld-nav">
+      <div class="ld-logo"><span class="b">🚴</span>DS&nbsp;Météo</div>
+      <span class="pill"><span class="dot"></span>données live · Open-Meteo</span>
+    </nav>
+
+    <header class="hero">
+      <div class="eyebrow">⚡ analyse météo de parcours</div>
+      <h1>
+        <span class="l1">Partez</span>
+        <span class="l2">au bon</span>
+        <span class="l3">moment.</span>
+      </h1>
+      <p class="sub">Importez votre tracé GPX. DS Météo analyse le ciel <b>kilomètre par kilomètre</b> — vent, pluie, orages — et vous indique le moment idéal pour rouler.</p>
+      <div class="cta-row">
+        <button class="cta" id="enterApp">Ouvrir l'outil <span class="arr">→</span></button>
+        <button class="cta ghost" id="seeMore">En savoir plus</button>
+        <span class="cta-hint">Gratuit · sans inscription · aucune installation</span>
+      </div>
+    </header>
+
+    <div class="float f1"><span class="ico">🌬️</span> 24 km/h <small>face</small></div>
+    <div class="float f2"><span class="ico">⛈️</span> CAPE 680 <small>orage</small></div>
+    <div class="float f3"><span class="ico">🟢</span> Favorable <small>09h→16h</small></div>
+
+    <section class="ld-section" id="features">
+      <div class="ld-kicker">Fonctionnalités</div>
+      <div class="cards">
+        <div class="card"><span class="ic">🧭</span><h3>Vent ressenti</h3><p>Face, dos ou travers — calculé selon l'orientation exacte de votre parcours, et non une simple direction cardinale.</p></div>
+        <div class="card"><span class="ic">⛈️</span><h3>Pluie et orages</h3><p>Probabilité, cumul en millimètres et indice orageux (CAPE) pour chaque point du parcours.</p></div>
+        <div class="card"><span class="ic">🔮</span><h3>Meilleur créneau</h3><p>L'outil analyse les sept prochains jours et classe les départs selon les conditions météo prévues.</p></div>
+        <div class="card"><span class="ic">🎙️</span><h3>Synthèse complète</h3><p>Un résumé clair, les points sensibles du parcours et un verdict global, exportable en image.</p></div>
+      </div>
+    </section>
+
+    <section class="ld-section">
+      <div class="ld-kicker">En trois étapes</div>
+      <div class="steps">
+        <div class="step"><div class="num">1</div><h4>Importez le tracé</h4><p>Export Strava, Komoot ou Garmin. Glissez-déposez le fichier GPX.</p></div>
+        <div class="step"><div class="num">2</div><h4>Réglez les paramètres</h4><p>Date, heure de départ et vitesse moyenne. L'outil calcule le reste.</p></div>
+        <div class="step"><div class="num">3</div><h4>Consultez l'analyse</h4><p>Carte annotée, points de mesure et synthèse météo du parcours.</p></div>
+      </div>
+    </section>
+
+    <section class="ld-final">
+      <h2>Anticipez la météo.</h2>
+      <p>Importez votre premier tracé en quelques secondes.</p>
+      <button class="cta" id="enterApp2">Ouvrir l'outil <span class="arr">→</span></button>
+    </section>
+
+    <div class="ld-foot">Conçu à Strasbourg · données <b>Open-Meteo</b> · cartographie <b>CARTO</b></div>
+  </div>
+
+  <div class="scroll-hint">Découvrir<div class="ch"></div></div>
+</div>
 
 <div id="topbar">
   <div class="logo"><span class="bike">🚴</span>DS&nbsp;Météo<span class="tag">coach cycliste</span></div>
@@ -205,8 +377,9 @@
   <div class="ctrl"><label>Date</label><input type="date" id="startDate"></div>
   <div class="ctrl"><label>Départ</label><input type="time" id="startTime" value="08:15"></div>
   <div class="ctrl"><label>Vitesse</label><input type="number" id="speed" value="25" min="8" max="45" step="1"></div>
-  <button class="iconbtn" id="darkBtn" title="Mode sombre">🌙</button>
-  <button class="iconbtn" id="exportBtn" title="Exporter en image">⬇</button>
+  <div class="ctrl"><label>Mesure / km</label><input type="number" id="stepKm" value="10" min="2" max="100" step="1"></div>
+  <button class="iconbtn" id="darkBtn" title="Mode sombre" aria-label="Basculer le thème"><svg class="ic-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+  <button class="iconbtn" id="exportBtn" title="Télécharger l'image de synthèse" aria-label="Télécharger l'image"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span class="iconbtn-label">Image</span></button>
   <button class="btn ghost" id="bestBtn">🔮 Meilleur créneau</button>
   <button class="btn" id="goBtn">Analyser</button>
 </div>
@@ -217,8 +390,8 @@
   <div id="sbScroll">
     <div class="empty" id="emptyState">
       <div class="big">🗺️🚴‍♂️</div>
-      <h2>Charge ton tracé</h2>
-      <p>Importe un <b>.gpx</b> (sortie Strava / Komoot), règle l'heure de départ et ta vitesse, puis <b>Analyser</b>.</p>
+      <h2>Importez votre tracé</h2>
+      <p>Sélectionnez un fichier <b>.gpx</b> (export Strava ou Komoot), réglez l'heure de départ et la vitesse, puis lancez l'analyse.</p>
     </div>
     <div id="content" style="display:none"></div>
   </div>
@@ -234,7 +407,7 @@
 
 <div id="toast"></div>
 
-<div id="dropzone"><div class="box"><div class="ic">📂🚴</div>Déposez votre fichier GPX<small>Strava · Komoot · Garmin…</small></div></div>
+<div id="dropzone"><div class="box"><div class="ic">📂🚴</div>Déposez votre fichier GPX<small>Strava · Komoot · Garmin</small></div></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -273,7 +446,28 @@ const TOWNS = [
 /* ---- Helpers géo ---- */
 const R=6371, toRad=d=>d*Math.PI/180;
 function hav(a,b,c,d){const dl=toRad(c-a),dn=toRad(d-b);const x=Math.sin(dl/2)**2+Math.cos(toRad(a))*Math.cos(toRad(c))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
-function nearestTown(lat,lon){let best=null,bd=1e9;for(const t of TOWNS){const d=hav(lat,lon,t[1],t[2]);if(d<bd){bd=d;best=t;}}return best[0];}
+function nearestTown(lat,lon){let best=null,bd=1e9;for(const t of TOWNS){const d=hav(lat,lon,t[1],t[2]);if(d<bd){bd=d;best=t;}}return best?best[0]:'';}
+
+/* ---- Reverse-geocoding mondial (BigDataCloud, gratuit, sans clé) ----
+   Donne le nom de localité correct partout (France, Allemagne, Suisse…).
+   Repli sur la liste locale TOWNS si l'API est indisponible. ---- */
+const geoCache={};
+async function placeName(lat,lon){
+  const key=lat.toFixed(2)+','+lon.toFixed(2);
+  if(geoCache[key]!==undefined) return geoCache[key];
+  try{
+    const ctrl=new AbortController();
+    const to=setTimeout(()=>ctrl.abort(),4000);
+    const url=`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&localityLanguage=fr`;
+    const r=await fetch(url,{signal:ctrl.signal});
+    clearTimeout(to);
+    if(!r.ok) throw 0;
+    const j=await r.json();
+    const name=j.city||j.locality||j.principalSubdivision||nearestTown(lat,lon);
+    geoCache[key]=name||nearestTown(lat,lon);
+  }catch(e){ geoCache[key]=nearestTown(lat,lon); }
+  return geoCache[key];
+}
 
 /* ---- Risque (repris tel quel) ---- */
 function risk(prob,mm,cape,gusts){
@@ -368,17 +562,17 @@ function pointAt(dist){
 }
 
 /* ---- Construit les checkpoints (départ + chaque heure + arrivée) ---- */
-function buildCheckpoints(startDate,speed){
+function buildCheckpoints(startDate,speed,stepKm){
   const total=cumDist[cumDist.length-1];
-  const totalH=total/speed;
-  const marks=[];
-  for(let h=0;h<totalH;h++) marks.push(h);
-  marks.push(totalH);                 // arrivée exacte
-  return marks.map((h,idx)=>{
-    const dist=Math.min(speed*h,total);
+  const step=Math.max(2,stepKm||10);
+  const marks=[0];
+  for(let d=step; d<total-0.001; d+=step) marks.push(d);
+  marks.push(total);                  // arrivée exacte
+  return marks.map((dist,idx)=>{
     const p=pointAt(dist);
+    const h=dist/speed;               // heure de passage = distance / vitesse
     const t=new Date(startDate.getTime()+h*3600*1000);
-    return {idx, h, dist, ...p, time:t, kind: idx===0?'start': (h>=totalH?'end':'mid')};
+    return {idx, h, dist, ...p, time:t, kind: idx===0?'start': (idx===marks.length-1?'end':'mid')};
   });
 }
 
@@ -442,7 +636,7 @@ function slotScore(start, sampleData){
 
 /* ---- Scan : meilleur jour/heure pour faire le tracé ---- */
 async function findBestSlot(){
-  if(!pts.length){toast('Charge d\'abord un GPX 📂');return;}
+  if(!pts.length){toast('Importez un tracé GPX au préalable');return;}
   const speed=Math.max(8,parseFloat(document.getElementById('speed').value)||25);
   buildCum();
   const total=cumDist[cumDist.length-1];
@@ -451,10 +645,10 @@ async function findBestSlot(){
   const SCAN_DAYS=7;                              // au-delà la prévi pluie/orage n'est plus fiable
   fcDays=Math.min(16,SCAN_DAYS+1);
 
-  toast('🔮 Scan des créneaux sur 7 jours…');
+  toast('🔮 Analyse des créneaux sur 7 jours…');
   document.getElementById('emptyState').style.display='none';
   const content=document.getElementById('content'); content.style.display='block';
-  content.innerHTML=`<div class="empty" style="height:auto;padding:40px 20px"><div class="big">🔮</div><h2>Scan en cours…</h2><p>Récupération des prévisions le long du tracé.</p></div>`;
+  content.innerHTML=`<div class="empty" style="height:auto;padding:40px 20px"><div class="big">🔮</div><h2>Analyse en cours</h2><p>Récupération des prévisions le long du parcours.</p></div>`;
 
   // échantillons de position (indépendants de l'heure de départ)
   const sampleData=[];
@@ -466,7 +660,7 @@ async function findBestSlot(){
       sampleData.push({h, p, data, bearing:routeBearing(dist)});
     }
   }catch(e){
-    content.innerHTML=`<div class="empty"><div class="big">😬</div><h2>Souci météo</h2><p>${e.message}. Réessaie.</p></div>`;
+    content.innerHTML=`<div class="empty"><div class="big">😬</div><h2>Erreur de récupération</h2><p>${e.message}. Veuillez réessayer.</p></div>`;
     return;
   }
 
@@ -486,12 +680,11 @@ async function findBestSlot(){
       cand.push(sc);
     }
   }
-  if(!cand.length){ content.innerHTML=`<div class="empty"><div class="big">🤔</div><h2>Aucun créneau</h2><p>Le tracé est peut-être trop long pour finir avant 22h. Réduis-le ou augmente la vitesse.</p></div>`; return; }
+  if(!cand.length){ content.innerHTML=`<div class="empty"><div class="big">🤔</div><h2>Aucun créneau disponible</h2><p>Le parcours est probablement trop long pour se terminer avant 22h. Réduisez la distance ou augmentez la vitesse.</p></div>`; return; }
 
   cand.sort((a,b)=>a.score-b.score);
   renderBestSlots(cand.slice(0,6), speed, total, totalH);
-  toast('✅ '+cand.length+' créneaux analysés');
-}
+  toast('✅ '+cand.length+' créneaux analysés');}
 
 function renderBestSlots(list, speed, total, totalH){
   const content=document.getElementById('content');
@@ -499,8 +692,8 @@ function renderBestSlots(list, speed, total, totalH){
   let html=`
     <div class="briefing">
       <div class="bh">🔮 Meilleur créneau — 7 prochains jours</div>
-      <div class="bt">Sur <b>${total.toFixed(0)} km</b> à ${speed} km/h (${Math.floor(totalH)}h${String(Math.round((totalH%1)*60)).padStart(2,'0')}), le créneau le plus clean : <b>${best.start.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</b> au départ de <b>${best.start.getHours()}h</b>.</div>
-      <span class="verdict ${best.worst}">${best.worst==='green'?'🟢 Conditions idéales':best.worst==='yellow'?'🟡 Correct, vigilance':'🔴 Le moins pire'}</span>
+      <div class="bt">Sur <b>${total.toFixed(0)} km</b> à ${speed} km/h (${Math.floor(totalH)}h${String(Math.round((totalH%1)*60)).padStart(2,'0')}), le créneau le plus favorable : <b>${best.start.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</b> au départ de <b>${best.start.getHours()}h</b>.</div>
+      <span class="verdict ${best.worst}">${best.worst==='green'?'🟢 Conditions idéales':best.worst==='yellow'?'🟡 Conditions acceptables':'🔴 Conditions limitées'}</span>
     </div>
     <div class="sectitle">Classement des créneaux</div>`;
 
@@ -512,7 +705,7 @@ function renderBestSlots(list, speed, total, totalH){
         <div class="dot" style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px">${i===0?'🥇':i+1}</div>
         <div class="info">
           <div class="top"><span class="time">${s.start.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'})} · ${s.start.getHours()}h</span><span class="km">→ ${(s.start.getHours()+Math.floor(totalH))}h${String(Math.round((totalH%1)*60)).padStart(2,'0')}</span></div>
-          <div class="place">${s.start.toLocaleDateString('fr-FR',{month:'long'})} · clique pour analyser ce créneau</div>
+          <div class="place">${s.start.toLocaleDateString('fr-FR',{month:'long'})} · sélectionner pour analyser</div>
           <div class="row2">
             <span class="chip ${s.maxProb>=40?'warn':''}">💧 ${s.maxProb}%${s.sumMm>=0.1?' · '+s.sumMm+'mm':''}</span>
             <span class="chip">🌬 ${s.avgWind} moy</span>
@@ -521,7 +714,7 @@ function renderBestSlots(list, speed, total, totalH){
         </div>
       </div>`;
   });
-  html+=`<p style="font-size:11px;color:var(--muted);text-align:center;margin:10px 4px 4px;line-height:1.4">Au-delà de 5-6 jours, pluie et orages sont des tendances, pas des certitudes.</p>`;
+  html+=`<p style="font-size:11px;color:var(--muted);text-align:center;margin:10px 4px 4px;line-height:1.4">Au-delà de 5 à 6 jours, les prévisions de pluie et d'orages restent indicatives.</p>`;
   content.innerHTML=html;
 
   // clic → charge le créneau dans les champs et lance l'analyse détaillée
@@ -537,8 +730,9 @@ function renderBestSlots(list, speed, total, totalH){
   document.getElementById('refreshBar').style.display='none';
 }
 async function analyze(){
-  if(!pts.length){toast('Charge d\'abord un GPX 📂');return;}
+  if(!pts.length){toast('Importez un tracé GPX au préalable');return;}
   const speed=Math.max(8,parseFloat(document.getElementById('speed').value)||25);
+  const stepKm=Math.max(2,parseFloat(document.getElementById('stepKm').value)||10);
   const [hh,mm]=document.getElementById('startTime').value.split(':').map(Number);
   const dVal=document.getElementById('startDate').value;
   const start=dVal?new Date(dVal+'T00:00:00'):new Date();
@@ -548,11 +742,11 @@ async function analyze(){
   const today=new Date(); today.setHours(0,0,0,0);
   const dayStart=new Date(start); dayStart.setHours(0,0,0,0);
   const diff=Math.round((dayStart-today)/86400000);
-  if(diff<0){ toast('⚠️ Date passée — choisis aujourd\'hui ou plus tard'); return; }
+  if(diff<0){ toast('⚠️ Date passée — sélectionnez aujourd\'hui ou une date ultérieure'); return; }
   fcDays=Math.min(16,Math.max(2,diff+2));
 
   buildCum();
-  checkpoints=buildCheckpoints(start,speed);
+  checkpoints=buildCheckpoints(start,speed,stepKm);
 
   // Récup météo par checkpoint
   try{
@@ -568,14 +762,15 @@ async function analyze(){
       cp.wdir=H.winddirection_10m?.[i]??0;
       cp.gust=Math.round(H.windgusts_10m?.[i]??0);
       cp.cape=Math.round(H.cape?.[i]??0);
-      cp.town=nearestTown(cp.lat,cp.lon);
       cp.bearing=routeBearing(cp.dist);
       cp.rel=windRel(cp.wdir,cp.bearing);
       cp.risk=risk(cp.prob,cp.mm,cp.cape,cp.gust);
     }
+    // noms de lieux (reverse-geocoding mondial, en parallèle)
+    await Promise.all(checkpoints.map(async cp=>{ cp.town=await placeName(cp.lat,cp.lon); }));
   }catch(e){
     document.getElementById('content').innerHTML=
-      `<div class="empty"><div class="big">😬</div><h2>Souci météo</h2><p>${e.message}. Vérifie ta connexion et réessaie.</p></div>`;
+      `<div class="empty"><div class="big">😬</div><h2>Erreur de récupération</h2><p>${e.message}. Vérifiez votre connexion, puis réessayez.</p></div>`;
     document.getElementById('emptyState').style.display='none';
     document.getElementById('content').style.display='block';
     return;
@@ -585,7 +780,7 @@ async function analyze(){
   renderSidebar(speed);
   drawElevation();
   scheduleRefresh();
-  toast('Analyse à jour ✅');
+  toast('✅ Analyse terminée');
 }
 
 /* ---- Carte ---- */
@@ -638,9 +833,9 @@ function renderSidebar(speed){
 
   let html=`
     <div class="briefing">
-      <div class="bh">Briefing DS — ${checkpoints[0].time.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})} · ${checkpoints[0].time.getHours()}h${String(checkpoints[0].time.getMinutes()).padStart(2,'0')} départ</div>
+      <div class="bh">Synthèse — ${checkpoints[0].time.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} · départ ${checkpoints[0].time.getHours()}h${String(checkpoints[0].time.getMinutes()).padStart(2,'0')}</div>
       <div class="bt">${brief}</div>
-      <span class="verdict ${worst}">${worst==='green'?'🟢 Feu vert':worst==='yellow'?'🟡 Vigilance':'🔴 Sortie risquée'}</span>
+      <span class="verdict ${worst}">${worst==='green'?'🟢 Conditions favorables':worst==='yellow'?'🟡 Vigilance':'🔴 Conditions difficiles'}</span>
     </div>
     <div class="stats">
       <div class="stat"><div class="v">${total.toFixed(0)}</div><div class="l">km</div></div>
@@ -648,7 +843,7 @@ function renderSidebar(speed){
       <div class="stat"><div class="v">${Math.floor(totalH)}h${String(Math.round((totalH%1)*60)).padStart(2,'0')}</div><div class="l">durée</div></div>
       <div class="stat"><div class="v">${arrival.getHours()}h${String(arrival.getMinutes()).padStart(2,'0')}</div><div class="l">retour</div></div>
     </div>
-    <div class="sectitle">Checkpoints horaires</div>`;
+    <div class="sectitle">Points de mesure</div>`;
 
   checkpoints.forEach(cp=>{
     const stormChip = cp.cape>200 ? `<span class="chip warn">⚡ CAPE ${cp.cape}</span>` : '';
@@ -697,20 +892,19 @@ function hideRider(el){
 /* ---- Briefing texte ---- */
 function buildBriefing(speed,arrival,worst){
   const start=checkpoints[0], end=checkpoints[checkpoints.length-1];
-  const startTxt = start.prob>=40?`ciel menaçant (${start.prob}% de pluie)`:start.prob>=20?`couvert mais sec`:`conditions clean`;
-  // premier point critique
+  const startTxt = start.prob>=40?`un ciel chargé (${start.prob}% de précipitations)`:start.prob>=20?`un ciel couvert mais sec`:`des conditions dégagées`;
   const crit=checkpoints.find(c=>c.risk!=='green');
   let critTxt;
-  if(!crit) critTxt=`Aucun point chaud sur le parcours, le ciel te laisse tranquille du début à la fin.`;
+  if(!crit) critTxt=`Aucun point sensible sur le parcours : les conditions restent stables du départ à l'arrivée.`;
   else{
-    const why = crit.cape>200?`risque d'orage (CAPE ${crit.cape})`: crit.gust>50?`rafales à ${crit.gust} km/h`:`${crit.prob}% de pluie`;
-    critTxt=`Le point chaud : <b>${crit.town}</b> vers <b>${crit.time.getHours()}h</b> (km ${crit.dist.toFixed(0)}) — ${why}.`;
+    const why = crit.cape>200?`risque orageux (CAPE ${crit.cape})`: crit.gust>50?`rafales jusqu'à ${crit.gust} km/h`:`${crit.prob}% de précipitations`;
+    critTxt=`Point de vigilance : <b>${crit.town}</b> vers <b>${crit.time.getHours()}h</b> (km ${crit.dist.toFixed(0)}) — ${why}.`;
   }
-  const gear = worst==='red'?`<b>K-way obligatoire</b>, et garde un œil sur le ciel côté Vosges.`
-            : worst==='yellow'?`Coupe-vent dans la poche, on devrait passer entre les gouttes.`
-            : `Pas besoin de te charger, sors léger.`;
-  const arrTxt = end.prob>=40?`Retour humide (${end.prob}%), prévois de quoi te couvrir sur la fin.`:`Retour au sec vers ${arrival.getHours()}h${String(arrival.getMinutes()).padStart(2,'0')}.`;
-  return `Départ avec ${startTxt}. ${critTxt} ${gear} ${arrTxt}`;
+  const gear = worst==='red'?`Veste imperméable recommandée, et surveillez l'évolution du ciel.`
+            : worst==='yellow'?`Coupe-vent conseillé par précaution.`
+            : `Aucun équipement particulier nécessaire.`;
+  const arrTxt = end.prob>=40?`Arrivée sous la pluie probable (${end.prob}%) : prévoyez une protection pour la fin du parcours.`:`Arrivée au sec prévue vers ${arrival.getHours()}h${String(arrival.getMinutes()).padStart(2,'0')}.`;
+  return `Départ sous ${startTxt}. ${critTxt} ${gear} ${arrTxt}`;
 }
 
 /* ---- Profil altimétrique ---- */
@@ -761,7 +955,11 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 function toggleDark(){
   dark=!dark;
   document.body.classList.toggle('dark',dark);
-  document.getElementById('darkBtn').textContent=dark?'☀️':'🌙';
+  const moon='<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  const sun='<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>';
+  const svg=document.querySelector('#darkBtn svg');
+  if(svg) svg.innerHTML=dark?sun:moon;
+  document.getElementById('darkBtn').title=dark?'Mode clair':'Mode sombre';
   const url=dark?'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
                 :'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
   if(tile) tile.setUrl(url);
@@ -867,7 +1065,7 @@ async function buildMapImage(){
 }
 
 async function exportPng(){
-  if(!checkpoints.length){ toast('Lance d\'abord une analyse 📊'); return; }
+  if(!checkpoints.length){ toast('Lancez une analyse au préalable'); return; }
   if(typeof html2canvas==='undefined'){ toast('⚠️ Module export non chargé (connexion ?)'); return; }
   toast('🎨 Génération de l\'image…');
 
@@ -882,7 +1080,7 @@ async function exportPng(){
   const speed=total/totalH||25;
   const ele0=pts.reduce((s,p,i)=>i>0&&p.ele>pts[i-1].ele?s+(p.ele-pts[i-1].ele):s,0);
   const order={green:0,yellow:1,red:2}; let worst='green'; checkpoints.forEach(c=>{if(order[c.risk]>order[worst])worst=c.risk;});
-  const vTxt=worst==='green'?'🟢 Feu vert':worst==='yellow'?'🟡 Vigilance':'🔴 Sortie risquée';
+  const vTxt=worst==='green'?'🟢 Conditions favorables':worst==='yellow'?'🟡 Vigilance':'🔴 Conditions difficiles';
   const vCol=worst==='green'?'#2e9e3f':worst==='yellow'?'#e2890b':'#d8392f';
 
   // carte récap hors-écran (palette claire fixe pour un partage propre)
@@ -941,14 +1139,20 @@ async function exportPng(){
 /* ---- Chargement d'un fichier GPX (input ou drag&drop) ---- */
 function loadGpx(f){
   if(!f) return;
-  if(!/\.gpx$/i.test(f.name)){ toast('⚠️ Fichier .gpx attendu'); return; }
+  if(!/\.gpx$/i.test(f.name)){ toast('⚠️ Format attendu : fichier .gpx'); return; }
   document.getElementById('fname').textContent=f.name;
   const rd=new FileReader();
   rd.onload=ev=>{
     try{
       pts=parseGPX(ev.target.result);
-      toast('GPX chargé : '+pts.length+' points 🚴');
-      analyze();                       // lance l'analyse direct
+      toast('Tracé importé : '+pts.length+' points');
+      const landing=document.getElementById('landing');
+      if(landing && landing.style.display!=='none'){
+        landing.classList.add('leaving');
+        setTimeout(()=>{ landing.style.display='none'; if(map) map.invalidateSize(); analyze(); },600);
+      }else{
+        analyze();
+      }
     }catch(err){ toast('⚠️ '+err.message); }
   };
   rd.onerror=()=>toast('⚠️ Lecture du fichier impossible');
@@ -963,8 +1167,10 @@ function init(){
   const today=new Date(), maxD=new Date(Date.now()+15*86400000);
   di.value=fmt(today); di.min=fmt(today); di.max=fmt(maxD);
 
-  map=L.map('map',{zoomControl:true,attributionControl:false}).setView([48.58,7.6],11);
-  tile=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,crossOrigin:true}).addTo(map);
+  if(typeof L!=='undefined'){
+    map=L.map('map',{zoomControl:true,attributionControl:false}).setView([48.58,7.6],11);
+    tile=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,crossOrigin:true}).addTo(map);
+  }
 
   document.getElementById('gpxInput').addEventListener('change',e=>loadGpx(e.target.files[0]));
 
@@ -986,6 +1192,23 @@ function init(){
   document.getElementById('darkBtn').addEventListener('click',toggleDark);
   document.getElementById('exportBtn').addEventListener('click',exportPng);
   window.addEventListener('resize',()=>{ if(checkpoints.length) drawElevation(); });
+
+  // ---- Landing page ----
+  const landing=document.getElementById('landing');
+  function enterApp(){
+    landing.classList.add('leaving');
+    setTimeout(()=>{ landing.style.display='none'; if(map) map.invalidateSize(); },600);
+  }
+  document.getElementById('enterApp').addEventListener('click',enterApp);
+  document.getElementById('enterApp2').addEventListener('click',enterApp);
+  document.getElementById('seeMore').addEventListener('click',()=>{
+    document.getElementById('features').scrollIntoView({behavior:'smooth'});
+  });
+  document.querySelector('.scroll-hint').addEventListener('click',()=>{
+    document.getElementById('features').scrollIntoView({behavior:'smooth'});
+  });
+  // si on dépose un GPX directement sur la landing, on entre dans l'outil
+  window.addEventListener('drop',()=>{ if(landing.style.display!=='none' && pts.length===0){ /* loadGpx gère déjà l'analyse */ } });
 }
 init();
 </script>
