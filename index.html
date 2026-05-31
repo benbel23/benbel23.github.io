@@ -524,6 +524,78 @@ function windRel(wdir,bearing){
   return     {key:'travers',txt:'travers', ico:'⟷'};       // vent de travers
 }
 
+/* ---- Composante de vent dans l'axe du cycliste ----
+   renvoie la vitesse de vent (km/h) PROJETÉE sur l'axe d'avancement :
+   positive = vent de face, négative = vent dans le dos. ---- */
+function windAxial(wind,wdir,bearing){
+  const toward=(wdir+180)%360;                 // direction vers laquelle le vent souffle
+  let diff=((toward-bearing+540)%360)-180;     // angle vent/cap
+  // composante le long du cap : cos(diff)=+1 vent poussant dans le dos
+  return -wind*Math.cos(diff*Math.PI/180);     // +face / -dos
+}
+
+/* ---- Pénalité de conditions (système de points) ----
+   orage -3 · neige -4 · pluie -2 · vent de face -2 · travers fort -1 · rafales -1.
+   Modulé par l'intensité. Renvoie un nombre négatif (0 = parfait). ---- */
+function conditionScore(cp){
+  let s=0; const tags=[];
+  // neige (codes WMO 71-77, 85-86)
+  const snow=(cp.code>=71&&cp.code<=77)||cp.code>=85&&cp.code<=86;
+  if(snow){ s-=4; tags.push('neige'); }
+  // orage (code 95+ ou CAPE élevé)
+  if(cp.code>=95 || cp.cape>800){ s-=3; tags.push('orage'); }
+  else if(cp.cape>300){ s-=1.5; tags.push('risque orageux'); }
+  // pluie (hors neige)
+  if(!snow){
+    if(cp.mm>=2 || cp.prob>=70) { s-=2; tags.push('pluie'); }
+    else if(cp.mm>=0.3 || cp.prob>=40){ s-=1; tags.push('averses'); }
+  }
+  // vent : selon composante axiale
+  const ax=windAxial(cp.wind,cp.wdir,cp.bearing);
+  if(ax>18){ s-=2; tags.push('fort vent de face'); }
+  else if(ax>8){ s-=1; tags.push('vent de face'); }
+  // travers fort
+  if(cp.rel.key==='travers' && cp.wind>30){ s-=1; tags.push('vent de travers'); }
+  // rafales
+  if(cp.gust>55){ s-=1; tags.push('rafales'); }
+  cp.tags=tags;
+  return s;
+}
+
+/* ---- Estimation du temps perdu/gagné à cause du vent ----
+   Modèle simplifié : sur chaque segment, la résistance aéro varie avec
+   (v + vent_axial)². On compare le temps réel au temps "sans vent".
+   Renvoie les minutes perdues (positif) ou gagnées (négatif) sur tout le parcours. ---- */
+function windTimeImpact(speed){
+  if(checkpoints.length<2) return 0;
+  const v=speed/3.6;                           // m/s du cycliste
+  const Cd=0.36, A=0.5, rho=1.225, m=80, Crr=0.005, g=9.81;
+  const k=0.5*Cd*A*rho;                         // coef aéro
+  // puissance de référence pour tenir v sans vent (sur le plat)
+  const Pref=k*v*v*v + Crr*m*g*v;
+  let tReal=0, tCalm=0;
+  for(let i=1;i<checkpoints.length;i++){
+    const a=checkpoints[i-1], b=checkpoints[i];
+    const segKm=b.dist-a.dist; if(segKm<=0) continue;
+    const segM=segKm*1000;
+    // vent axial moyen sur le segment (m/s, +face)
+    const axA=windAxial(a.wind,a.wdir,a.bearing), axB=windAxial(b.wind,b.wdir,b.bearing);
+    const wax=((axA+axB)/2)/3.6;
+    // résoudre la vitesse v' qui tient la puissance Pref avec ce vent
+    // Pref = k*(v'+wax)^2 * v' + Crr*m*g*v'  → résolution numérique
+    let vv=v;
+    for(let it=0;it<24;it++){
+      const P=k*Math.pow(vv+wax,2)*vv + Crr*m*g*vv;
+      const dP=k*(3*vv*vv+4*vv*wax+wax*wax) + Crr*m*g;
+      vv -= (P-Pref)/dP;
+      if(vv<1) vv=1;
+    }
+    tReal += segM/vv;
+    tCalm += segM/v;
+  }
+  return (tReal-tCalm)/60;                      // minutes
+}
+
 /* ---- État global ---- */
 let map, layer, tile, dark=false, routeLine=null, pts=[], cumDist=[], checkpoints=[], riderMarker=null, refreshTimer=null, fcDays=2;
 const cache={};
@@ -610,7 +682,7 @@ function hourIndexStrict(data,date){
 
 /* ---- Score d'un créneau (plus bas = mieux) ---- */
 function slotScore(start, sampleData){
-  let score=0,n=0,worst='green',sumMm=0,maxProb=0,sumWind=0,head=0,capeMax=0;
+  let penalty=0,n=0,worst='green',sumMm=0,maxProb=0,sumWind=0,nFace=0,capeMax=0,sumAxial=0,minPt=0;
   for(const s of sampleData){
     const t=new Date(start.getTime()+s.h*3600000);
     const idx=hourIndexStrict(s.data,t);
@@ -619,19 +691,28 @@ function slotScore(start, sampleData){
     const prob=H.precipitation_probability?.[idx]??0;
     const mm=H.precipitation?.[idx]??0;
     const cape=H.cape?.[idx]??0;
+    const code=H.weathercode?.[idx]??3;
     const wind=H.windspeed_10m?.[idx]??0;
     const gust=H.windgusts_10m?.[idx]??0;
     const wdir=H.winddirection_10m?.[idx]??0;
+    // pénalité pondérée (même barème que conditionScore)
+    const fake={code,cape,mm,prob,wind,gust,wdir,bearing:s.bearing,rel:windRel(wdir,s.bearing)};
+    const pt=conditionScore(fake);               // négatif
+    penalty += -pt;                              // accumulé positif (plus c'est haut, pire)
+    minPt=Math.min(minPt,pt);
+    const ax=windAxial(wind,wdir,s.bearing);
+    if(ax>8) nFace++;
+    sumAxial+=Math.max(0,ax);
     const rk=risk(prob,mm,cape,gust);
-    score += rk==='red'?100:rk==='yellow'?25:0;
-    score += mm*15 + prob*0.4 + Math.max(0,wind-22)*1.2 + Math.max(0,gust-38)*1.2 + (cape>200?(cape-200)/8:0);
-    const rel=windRel(wdir,s.bearing); if(rel.key==='face') head++;
     sumMm+=mm; maxProb=Math.max(maxProb,prob); sumWind+=wind; capeMax=Math.max(capeMax,cape);
     if(rk==='red')worst='red'; else if(rk==='yellow'&&worst!=='red')worst='yellow';
     n++;
   }
-  score += head*6;                               // pénalité vent de face
-  return {score, worst, sumMm:+sumMm.toFixed(1), maxProb, avgWind:Math.round(sumWind/n), head, capeMax:Math.round(capeMax), nFace:head, nPts:n};
+  const avgPen=penalty/n;
+  // verdict pondéré aligné sur globalVerdict
+  let v='green'; if(minPt<=-3 || avgPen>=2) v='red'; else if(minPt<=-1.5 || avgPen>=0.8) v='yellow';
+  return {score:penalty, worst:v, sumMm:+sumMm.toFixed(1), maxProb, avgWind:Math.round(sumWind/n),
+          capeMax:Math.round(capeMax), nFace, nPts:n, avgAxial:sumAxial/n};
 }
 
 /* ---- Scan : meilleur jour/heure pour faire le tracé ---- */
@@ -764,7 +845,9 @@ async function analyze(){
       cp.cape=Math.round(H.cape?.[i]??0);
       cp.bearing=routeBearing(cp.dist);
       cp.rel=windRel(cp.wdir,cp.bearing);
+      cp.axial=windAxial(cp.wind,cp.wdir,cp.bearing);
       cp.risk=risk(cp.prob,cp.mm,cp.cape,cp.gust);
+      cp.pts=conditionScore(cp);
     }
     // noms de lieux (reverse-geocoding mondial, en parallèle)
     await Promise.all(checkpoints.map(async cp=>{ cp.town=await placeName(cp.lat,cp.lon); }));
@@ -825,29 +908,37 @@ function renderSidebar(speed){
   const ele0=pts.reduce((s,p,i)=>i>0&&p.ele>pts[i-1].ele?s+(p.ele-pts[i-1].ele):s,0);
   const arrival=checkpoints[checkpoints.length-1].time;
 
-  // verdict global = pire risque
-  const order={green:0,yellow:1,red:2};
-  let worst='green'; checkpoints.forEach(c=>{if(order[c.risk]>order[worst])worst=c.risk;});
+  // verdict global pondéré (système de points)
+  const verdict=globalVerdict();
+  const worst=verdict.worst;
+  const dtWind=windTimeImpact(speed);
 
   const brief=buildBriefing(speed,arrival,worst);
+
+  // libellé impact vent pour la stat
+  let windStat,windLabel;
+  if(Math.abs(dtWind)<1){ windStat='≈0'; windLabel='vent'; }
+  else if(dtWind>0){ windStat='+'+Math.round(dtWind); windLabel='min (vent)'; }
+  else { windStat='−'+Math.round(-dtWind); windLabel='min (vent)'; }
 
   let html=`
     <div class="briefing">
       <div class="bh">Synthèse — ${checkpoints[0].time.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} · départ ${checkpoints[0].time.getHours()}h${String(checkpoints[0].time.getMinutes()).padStart(2,'0')}</div>
       <div class="bt">${brief}</div>
-      <span class="verdict ${worst}">${worst==='green'?'🟢 Conditions favorables':worst==='yellow'?'🟡 Vigilance':'🔴 Conditions difficiles'}</span>
+      <span class="verdict ${worst}">${worst==='green'?'🟢 Conditions favorables':worst==='yellow'?'🟡 Vigilance':'🔴 Conditions difficiles'} · ${verdict.score}/100</span>
     </div>
     <div class="stats">
       <div class="stat"><div class="v">${total.toFixed(0)}</div><div class="l">km</div></div>
       <div class="stat"><div class="v">${ele0.toFixed(0)}</div><div class="l">D+ m</div></div>
       <div class="stat"><div class="v">${Math.floor(totalH)}h${String(Math.round((totalH%1)*60)).padStart(2,'0')}</div><div class="l">durée</div></div>
-      <div class="stat"><div class="v">${arrival.getHours()}h${String(arrival.getMinutes()).padStart(2,'0')}</div><div class="l">retour</div></div>
+      <div class="stat" title="Temps perdu (+) ou gagné (−) à cause du vent"><div class="v" style="color:${dtWind>1?'var(--red)':dtWind<-1?'var(--green)':'inherit'}">${windStat}</div><div class="l">${windLabel}</div></div>
     </div>
     <div class="sectitle">Points de mesure</div>`;
 
   checkpoints.forEach(cp=>{
-    const stormChip = cp.cape>200 ? `<span class="chip warn">⚡ CAPE ${cp.cape}</span>` : '';
+    const stormChip = cp.cape>300 ? `<span class="chip warn">⚡ orage</span>` : '';
     const rainChip = `<span class="chip ${cp.prob>=40?'warn':''}">💧 ${cp.prob}%${cp.mm>=0.1?' · '+cp.mm.toFixed(1)+'mm':''}</span>`;
+    const faceChip = cp.axial>8 ? `<span class="chip warn">⬆ face ${Math.round(cp.axial)}</span>` : '';
     const label = cp.kind==='start'?'🚩 Départ':cp.kind==='end'?'🏁 Arrivée':`Km ${cp.dist.toFixed(0)}`;
     html+=`
       <div class="cp ${cp.risk}" data-idx="${cp.idx}">
@@ -858,7 +949,7 @@ function renderSidebar(speed){
           <div class="row2">
             ${rainChip}
             <span class="chip">${windArrow(cp.wdir,cp.wind,13)} ${cp.wind}${cp.gust>cp.wind+10?'/'+cp.gust:''} <b>${cp.rel.ico} ${cp.rel.txt}</b></span>
-            ${stormChip}
+            ${faceChip}${stormChip}
           </div>
         </div>
       </div>`;
@@ -889,22 +980,65 @@ function hideRider(el){
   document.querySelectorAll('.cp.hot').forEach(c=>c.classList.remove('hot'));
 }
 
-/* ---- Briefing texte ---- */
+/* ---- Briefing texte enrichi ---- */
 function buildBriefing(speed,arrival,worst){
   const start=checkpoints[0], end=checkpoints[checkpoints.length-1];
-  const startTxt = start.prob>=40?`un ciel chargé (${start.prob}% de précipitations)`:start.prob>=20?`un ciel couvert mais sec`:`des conditions dégagées`;
-  const crit=checkpoints.find(c=>c.risk!=='green');
-  let critTxt;
-  if(!crit) critTxt=`Aucun point sensible sur le parcours : les conditions restent stables du départ à l'arrivée.`;
-  else{
-    const why = crit.cape>200?`risque orageux (CAPE ${crit.cape})`: crit.gust>50?`rafales jusqu'à ${crit.gust} km/h`:`${crit.prob}% de précipitations`;
-    critTxt=`Point de vigilance : <b>${crit.town}</b> vers <b>${crit.time.getHours()}h</b> (km ${crit.dist.toFixed(0)}) — ${why}.`;
+  const mids=checkpoints; // tous points
+  const phrases=[];
+
+  // 1) état au départ
+  const startTxt = start.prob>=40?`un ciel chargé (${start.prob}% de précipitations)`:start.prob>=20?`un ciel couvert`:`des conditions dégagées`;
+  phrases.push(`Départ sous ${startTxt}.`);
+
+  // 2) impact du vent (chiffré)
+  const dt=windTimeImpact(speed);
+  const nFace=mids.filter(c=>c.axial>8).length;
+  const nBack=mids.filter(c=>c.axial<-8).length;
+  if(Math.abs(dt)>=1){
+    if(dt>0){
+      const where = nFace>=mids.length*0.5 ? `sur une bonne partie du parcours` : `par moments`;
+      phrases.push(`Vent globalement contraire ${where} : il vous coûtera environ <b>${Math.round(dt)} min</b> sur l'ensemble.`);
+    }else{
+      phrases.push(`Vent plutôt favorable : vous gagnerez environ <b>${Math.round(-dt)} min</b> grâce au vent dans le dos.`);
+    }
+  }else if(nFace>0){
+    phrases.push(`Quelques sections face au vent, sans impact notable sur le temps.`);
   }
-  const gear = worst==='red'?`Veste imperméable recommandée, et surveillez l'évolution du ciel.`
+
+  // 3) hiérarchisation des conditions par sévérité (point le plus pénalisé)
+  const worstCp=[...mids].sort((a,b)=>a.pts-b.pts)[0];
+  if(worstCp && worstCp.pts<=-2 && worstCp.tags?.length){
+    const cond=worstCp.tags[0];
+    phrases.push(`Point le plus délicat : <b>${worstCp.town}</b> vers <b>${worstCp.time.getHours()}h</b> (km ${worstCp.dist.toFixed(0)}) — ${cond}.`);
+  }else if(worstCp && worstCp.pts<0 && worstCp.tags?.length){
+    phrases.push(`Vigilance légère vers <b>${worstCp.town}</b> (${worstCp.tags[0]}).`);
+  }else{
+    phrases.push(`Aucun point sensible : conditions stables sur tout le parcours.`);
+  }
+
+  // 4) équipement selon le verdict pondéré
+  const gear = worst==='red'?`Équipement complet recommandé (imperméable), et surveillez le ciel.`
             : worst==='yellow'?`Coupe-vent conseillé par précaution.`
             : `Aucun équipement particulier nécessaire.`;
-  const arrTxt = end.prob>=40?`Arrivée sous la pluie probable (${end.prob}%) : prévoyez une protection pour la fin du parcours.`:`Arrivée au sec prévue vers ${arrival.getHours()}h${String(arrival.getMinutes()).padStart(2,'0')}.`;
-  return `Départ sous ${startTxt}. ${critTxt} ${gear} ${arrTxt}`;
+  phrases.push(gear);
+
+  // 5) arrivée
+  phrases.push(end.prob>=40?`Arrivée probablement humide (${end.prob}%).`:`Arrivée au sec prévue vers ${arrival.getHours()}h${String(arrival.getMinutes()).padStart(2,'0')}.`);
+
+  return phrases.join(' ');
+}
+
+/* ---- Verdict global pondéré : moyenne des points → couleur + score /100 ---- */
+function globalVerdict(){
+  if(!checkpoints.length) return {worst:'green',score:100};
+  const avg=checkpoints.reduce((s,c)=>s+(c.pts||0),0)/checkpoints.length;
+  const minPt=Math.min(...checkpoints.map(c=>c.pts||0));
+  // score sur 100 : 0 pénalité = 100, chaque point moyen retire ~12
+  const score=Math.max(0,Math.round(100+avg*12));
+  let worst='green';
+  if(minPt<=-3 || avg<=-2) worst='red';
+  else if(minPt<=-1.5 || avg<=-0.8) worst='yellow';
+  return {worst,score};
 }
 
 /* ---- Profil altimétrique ---- */
@@ -1079,8 +1213,8 @@ async function exportPng(){
   const totalH=cN.h||(total/25);
   const speed=total/totalH||25;
   const ele0=pts.reduce((s,p,i)=>i>0&&p.ele>pts[i-1].ele?s+(p.ele-pts[i-1].ele):s,0);
-  const order={green:0,yellow:1,red:2}; let worst='green'; checkpoints.forEach(c=>{if(order[c.risk]>order[worst])worst=c.risk;});
-  const vTxt=worst==='green'?'🟢 Conditions favorables':worst==='yellow'?'🟡 Vigilance':'🔴 Conditions difficiles';
+  const verdict=globalVerdict(); const worst=verdict.worst;
+  const vTxt=(worst==='green'?'🟢 Conditions favorables':worst==='yellow'?'🟡 Vigilance':'🔴 Conditions difficiles')+' · '+verdict.score+'/100';
   const vCol=worst==='green'?'#2e9e3f':worst==='yellow'?'#e2890b':'#d8392f';
 
   // carte récap hors-écran (palette claire fixe pour un partage propre)
