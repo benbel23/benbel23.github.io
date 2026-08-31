@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PokéCote, cote Cardmarket express</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E7E4DC;
+    --panel:#F4F1EB;
+    --panel-2:#FBF9F5;
+    --ink:#1B1A17;
+    --muted:#6C665E;
+    --faint:#959087;
+    --line:#CDC7BC;
+    --line-strong:#B7B0A4;
+    --accent:#B4322B;
+    --accent-ink:#FBF9F5;
+    --accent-dark:#8A2019;
+    --value:#1B1A17;
+    --ok:#2F6B4B;
+    --radius:10px;
+    --radius-sm:6px;
+    --fs-body:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Archivo",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    font-size:var(--fs-body);
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:22px 18px 64px}
+
+  header{margin:6px 0 20px}
+  .brand{display:flex;align-items:baseline;gap:10px}
+  .brand h1{
+    font-family:"Archivo Narrow","Archivo",sans-serif;
+    font-weight:700;font-size:30px;letter-spacing:.2px;margin:0;line-height:1;
+  }
+  .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--accent);flex:0 0 auto;transform:translateY(-2px)}
+  .tag{color:var(--muted);font-size:14.5px;margin:9px 0 0}
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+    margin:0 0 16px;
+  }
+  .card h2{font-size:13.5px;font-weight:700;letter-spacing:.3px;margin:0 0 12px;color:var(--muted)}
+
+  /* capture */
+  .caprow{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+  .filebtn{position:relative;flex:1 1 160px}
+  .filebtn input[type=file]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    width:100%;padding:12px 14px;border-radius:var(--radius-sm);
+    font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;
+    border:1px solid var(--line-strong);background:var(--panel-2);color:var(--ink);
+    transition:background .12s ease,border-color .12s ease,transform .04s ease;
+  }
+  .btn:hover{background:#fff;border-color:var(--muted)}
+  .btn:active{transform:translateY(1px)}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .btn.primary:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
+  .btn.ghost{background:transparent;border-color:var(--line-strong)}
+
+  .preview{display:none;margin-top:14px;gap:14px;align-items:flex-start}
+  .preview.on{display:flex}
+  .preview img{width:104px;height:auto;border-radius:var(--radius-sm);border:1px solid var(--line-strong);background:#fff}
+  .preview .pv-side{flex:1;min-width:0}
+  .status{font-size:13.5px;color:var(--muted);margin:8px 0 0;min-height:18px}
+  .status.work::after{content:"";display:inline-block;width:9px;height:9px;margin-left:7px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite ease-in-out;vertical-align:middle}
+  @keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.status.work::after{animation:none;opacity:.7}}
+
+  /* form */
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .field{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .field.wide{grid-column:1 / -1}
+  .field label{font-size:13px;font-weight:600;color:var(--muted)}
+  .field .hint{font-size:11.5px;color:var(--faint);font-weight:400}
+  input[type=text]{
+    font-family:inherit;font-size:16px;color:var(--ink);
+    padding:11px 12px;border:1px solid var(--line-strong);border-radius:var(--radius-sm);
+    background:var(--panel-2);width:100%;
+  }
+  input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+  .actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .actions .primary{flex:1 1 auto}
+  .actions .ghost{flex:0 0 auto}
+
+  /* results as a ledger */
+  #results{margin-top:6px}
+  .res-status{font-size:14px;color:var(--muted);margin:2px 0 12px;min-height:20px}
+  .ledger{border:1px solid var(--line-strong);border-radius:var(--radius);overflow:hidden;background:var(--panel-2)}
+  .row{
+    display:grid;grid-template-columns:64px 1fr auto;gap:14px;align-items:center;
+    padding:13px 14px;border-top:1px solid var(--line);
+    border-left:3px solid transparent;
+  }
+  .row:first-child{border-top:none}
+  .row:hover{background:#fff;border-left-color:var(--accent)}
+  .thumb{width:64px;height:89px;border-radius:4px;border:1px solid var(--line-strong);background:#efeae2 center/cover no-repeat;cursor:zoom-in;position:relative}
+  .thumb::after{content:"loupe";position:absolute;left:0;right:0;bottom:0;font-size:9px;text-align:center;color:#fff;background:rgba(0,0,0,.42);padding:1px 0;opacity:0;transition:opacity .12s}
+  .thumb:hover::after{opacity:1}
+  .meta{min-width:0}
+  .meta .nm{font-weight:700;font-size:16px;line-height:1.2}
+  .meta .sub{font-size:13px;color:var(--muted);margin-top:3px}
+  .meta .num{font-weight:600;color:var(--ink)}
+  .badge{display:inline-block;font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--line-strong);border-radius:20px;padding:1px 8px;margin-top:7px}
+  .price{text-align:right;min-width:118px}
+  .price .cote{font-size:21px;font-weight:800;letter-spacing:-.3px;font-variant-numeric:tabular-nums;line-height:1.05}
+  .price .cote.na{font-size:14px;font-weight:600;color:var(--faint)}
+  .price .lbl{font-size:10.5px;color:var(--faint);margin-top:1px;letter-spacing:.2px}
+  .price .sub2{font-size:11.5px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums}
+  .price .cta{margin-top:9px}
+  .price .cta a{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-size:13px;font-weight:700;
+    color:var(--accent-ink);background:var(--accent);border-radius:6px;padding:8px 11px;white-space:nowrap}
+  .price .cta a:hover{background:var(--accent-dark)}
+  .price .cta a:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .price .cta a.alt{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+  .price .cta a.alt:hover{background:#fff}
+
+  @media (max-width:560px){
+    .fields{grid-template-columns:1fr}
+    .row{grid-template-columns:56px 1fr;grid-template-areas:"t m" "p p";row-gap:10px}
+    .thumb{grid-area:t;width:56px;height:78px}
+    .meta{grid-area:m}
+    .price{grid-area:p;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px}
+    .price .cta{margin-top:0}
+    .price .sub2{width:100%}
+  }
+
+  .note{font-size:12.5px;color:var(--faint);margin:16px 2px 0;line-height:1.5}
+  .note b{color:var(--muted);font-weight:600}
+
+  /* lightbox */
+  .lb{position:fixed;inset:0;background:rgba(20,18,16,.86);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .lb.on{display:flex}
+  .lb img{max-width:min(94vw,520px);max-height:92vh;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+  .lb .x{position:absolute;top:14px;right:16px;color:#fff;font-size:30px;line-height:1;cursor:pointer;font-weight:300;background:none;border:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="dot"></span><h1>PokéCote</h1></div>
+    <p class="tag">Photo ou numéro, la cote Cardmarket en euros et le lien direct. La variante, c'est toi qui la confirmes.</p>
+  </header>
+
+  <section class="card">
+    <h2>1. La carte en photo (facultatif)</h2>
+    <div class="caprow">
+      <div class="filebtn">
+        <button class="btn" type="button" id="photoLabel">Prendre ou choisir une photo</button>
+        <input type="file" id="photo" accept="image/*" capture="environment">
+      </div>
+      <button class="btn ghost" type="button" id="ocrBtn" disabled style="flex:1 1 160px">Lire le numéro sur la photo</button>
+    </div>
+    <div class="preview" id="preview">
+      <img id="pvImg" alt="Aperçu de la carte">
+      <div class="pv-side">
+        <div class="status" id="ocrStatus">La lecture auto est approximative. Elle pré-remplit juste les champs, à toi de corriger.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>2. Identifier la carte</h2>
+    <div class="fields">
+      <div class="field">
+        <label for="num">Numéro <span class="hint">(ex : 199 ou GG69)</span></label>
+        <input type="text" id="num" inputmode="numeric" placeholder="199/197 accepté aussi" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="name">Nom <span class="hint">(en anglais)</span></label>
+        <input type="text" id="name" placeholder="Charizard, pas Dracaufeu" autocomplete="off">
+      </div>
+      <div class="field wide">
+        <label for="setq">Extension <span class="hint">(facultatif, en anglais)</span></label>
+        <input type="text" id="setq" placeholder="ex : Obsidian Flames" autocomplete="off">
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" type="button" id="search">Chercher la cote</button>
+      <button class="btn ghost" type="button" id="clear">Vider</button>
+    </div>
+    <details style="margin-top:12px">
+      <summary style="font-size:12.5px;color:var(--muted);cursor:pointer">Clé API pokemontcg.io (facultatif)</summary>
+      <div class="field" style="margin-top:10px">
+        <label for="key">Colle ta clé pour lever les limites de requêtes <span class="hint">(non enregistrée)</span></label>
+        <input type="text" id="key" placeholder="facultatif" autocomplete="off">
+      </div>
+    </details>
+  </section>
+
+  <section id="results">
+    <div class="res-status" id="resStatus">Entre au moins un numéro ou un nom, puis lance la recherche.</div>
+    <div id="list"></div>
+  </section>
+
+  <p class="note">
+    <b>Pour tes cartes de valeur :</b> le numéro est identique en français et en anglais, donc pour une carte FR cherche par numéro et repère la bonne au visuel (clique la vignette pour zoomer). La cote affichée est la tendance Cardmarket, un repère de marché, pas le prix d'une annonce précise. Ouvre la page Cardmarket pour l'état exact, la langue et les vraies annonces avant de fixer ton prix.
+    <br><br>
+    Données : pokemontcg.io (prix Cardmarket en euros). Aucune donnée ne quitte ton navigateur.
+  </p>
+</div>
+
+<div class="lb" id="lb"><button class="x" id="lbx" aria-label="Fermer">&times;</button><img id="lbImg" alt="Carte agrandie"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var eur = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
+
+  var currentImageData = null;
+
+  // ---- photo preview ----
+  $('photo').addEventListener('change', function(e){
+    var f = e.target.files && e.target.files[0];
+    if(!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      currentImageData = reader.result;
+      $('pvImg').src = currentImageData;
+      $('preview').classList.add('on');
+      $('ocrBtn').disabled = (typeof Tesseract === 'undefined');
+      if(typeof Tesseract === 'undefined'){
+        $('ocrStatus').textContent = "Lecture auto indisponible (script non chargé). Saisis le numéro à la main, ça marche pareil.";
+      }
+    };
+    reader.readAsDataURL(f);
+  });
+
+  // ---- OCR (best effort) ----
+  $('ocrBtn').addEventListener('click', function(){
+    if(!currentImageData || typeof Tesseract === 'undefined') return;
+    var st = $('ocrStatus');
+    st.classList.add('work');
+    st.textContent = "Lecture en cours";
+    $('ocrBtn').disabled = true;
+    Tesseract.recognize(currentImageData, 'eng')
+      .then(function(res){
+        var txt = (res && res.data && res.data.text) ? res.data.text : "";
+        var found = parseCard(txt);
+        st.classList.remove('work');
+        if(found.number){ $('num').value = found.number; }
+        if(found.name){ $('name').value = found.name; }
+        if(found.number || found.name){
+          st.textContent = "Lu : " + [found.name, found.number].filter(Boolean).join(" , ") + ". Vérifie et corrige si besoin.";
+        }else{
+          st.textContent = "Rien de fiable à lire (reflets, cadrage). Saisis le numéro à la main.";
+        }
+        $('ocrBtn').disabled = false;
+      })
+      .catch(function(){
+        st.classList.remove('work');
+        st.textContent = "La lecture a échoué. Saisis le numéro à la main.";
+        $('ocrBtn').disabled = false;
+      });
+  });
+
+  function parseCard(txt){
+    var out = {number:null, name:null};
+    // collector number like 199/197, 12/165, or SV107 / GG69 / TG05
+    var m = txt.match(/(\d{1,3})\s*\/\s*\d{1,3}/);
+    if(m){ out.number = m[1]; }
+    else{
+      var m2 = txt.match(/\b([A-Z]{2,3}\s?\d{1,3})\b/);
+      if(m2){ out.number = m2[1].replace(/\s+/,''); }
+    }
+    // name: first line with mostly letters, length >2, not an energy/rule line
+    var lines = txt.split(/\n+/);
+    for(var i=0;i<lines.length;i++){
+      var l = lines[i].trim();
+      if(l.length < 3) continue;
+      var letters = l.replace(/[^A-Za-z]/g,'').length;
+      if(letters >= 3 && letters/l.length > 0.6 && !/^(HP|BASIC|STAGE|EVOLVES|ENERGY|TRAINER)/i.test(l)){
+        out.name = l.replace(/\s+HP.*$/i,'').replace(/[^A-Za-z' -]/g,'').trim();
+        break;
+      }
+    }
+    return out;
+  }
+
+  // ---- search ----
+  function buildQuery(){
+    var num = $('num').value.trim();
+    var name = $('name').value.trim();
+    var setq = $('setq').value.trim();
+    var parts = [];
+    if(num){
+      var left = num.split('/')[0].trim();
+      if(left) parts.push('number:"' + esc(left) + '"');
+    }
+    if(name){
+      name.split(/\s+/).forEach(function(w){
+        w = w.replace(/[^A-Za-z0-9'\-]/g,'');
+        if(w) parts.push('name:*' + esc(w) + '*');
+      });
+    }
+    if(setq){
+      parts.push('set.name:"*' + esc(setq) + '*"');
+    }
+    return parts.join(' ');
+  }
+  function esc(s){ return s.replace(/"/g,''); }
+
+  $('search').addEventListener('click', doSearch);
+  ['num','name','setq'].forEach(function(id){
+    $(id).addEventListener('keydown', function(e){ if(e.key === 'Enter') doSearch(); });
+  });
+  $('clear').addEventListener('click', function(){
+    $('num').value=''; $('name').value=''; $('setq').value='';
+    $('list').innerHTML=''; $('resStatus').textContent = "Champs vidés.";
+  });
+
+  function doSearch(){
+    var q = buildQuery();
+    var rs = $('resStatus');
+    if(!q){
+      rs.textContent = "Entre au moins un numéro ou un nom.";
+      return;
+    }
+    $('list').innerHTML = '';
+    rs.classList.add('work'); rs.textContent = "Recherche";
+    var url = 'https://api.pokemontcg.io/v2/cards?q=' + encodeURIComponent(q) +
+              '&pageSize=24&orderBy=-set.releaseDate&select=id,name,number,rarity,set,images,cardmarket,tcgplayer';
+    var headers = {};
+    var key = $('key').value.trim();
+    if(key) headers['X-Api-Key'] = key;
+
+    fetch(url, {headers:headers})
+      .then(function(r){
+        if(!r.ok) throw new Error('http ' + r.status);
+        return r.json();
+      })
+      .then(function(json){
+        rs.classList.remove('work');
+        var data = (json && json.data) ? json.data : [];
+        // number-exact matches first
+        var numLeft = ($('num').value.split('/')[0]||'').trim();
+        if(numLeft){
+          data.sort(function(a,b){
+            var ea = (a.number===numLeft)?0:1, eb=(b.number===numLeft)?0:1;
+            return ea-eb;
+          });
+        }
+        render(data);
+      })
+      .catch(function(err){
+        rs.classList.remove('work');
+        rs.textContent = "La recherche n'a pas abouti (" + err.message + "). Réessaie, ou ajoute une clé API si ça persiste.";
+      });
+  }
+
+  function priceOf(cm){
+    if(!cm || !cm.prices) return null;
+    var p = cm.prices;
+    var head = (p.trendPrice!=null)?p.trendPrice:(p.averageSellPrice!=null?p.averageSellPrice:(p.lowPrice!=null?p.lowPrice:null));
+    return {head:head, avg30:p.avg30, low:p.lowPrice, rev:p.reverseHoloTrend};
+  }
+
+  function render(data){
+    var rs = $('resStatus');
+    var list = $('list');
+    if(!data.length){
+      rs.textContent = "Aucune carte trouvée. Vérifie le numéro, ou tente le nom anglais sans l'extension.";
+      list.innerHTML = '';
+      return;
+    }
+    rs.textContent = data.length + (data.length>1 ? " cartes qui matchent. Repère la tienne au visuel." : " carte trouvée.");
+    var ledger = document.createElement('div');
+    ledger.className = 'ledger';
+    data.forEach(function(c){
+      var pr = priceOf(c.cardmarket);
+      var img = (c.images && c.images.small) ? c.images.small : '';
+      var big = (c.images && c.images.large) ? c.images.large : img;
+      var setName = (c.set && c.set.name) ? c.set.name : '';
+      var series = (c.set && c.set.series) ? c.set.series : '';
+      var cmUrl = (c.cardmarket && c.cardmarket.url) ? c.cardmarket.url : null;
+      var fallback = 'https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=' + encodeURIComponent((c.name||'') + ' ' + (c.number||''));
+
+      var row = document.createElement('div');
+      row.className = 'row';
+
+      var priceHtml;
+      if(pr && pr.head!=null){
+        priceHtml =
+          '<div class="cote">' + eur.format(pr.head) + '</div>' +
+          '<div class="lbl">tendance Cardmarket</div>' +
+          '<div class="sub2">' +
+            (pr.avg30!=null ? 'moy. 30j ' + eur.format(pr.avg30) : '') +
+            (pr.low!=null ? ((pr.avg30!=null?' , ':'') + 'plus bas ' + eur.format(pr.low)) : '') +
+          '</div>';
+      }else{
+        priceHtml =
+          '<div class="cote na">cote indispo</div>' +
+          '<div class="lbl">voir sur Cardmarket</div>';
+      }
+      var link = cmUrl
+        ? '<div class="cta"><a href="' + cmUrl + '" target="_blank" rel="noopener">Ouvrir sur Cardmarket</a></div>'
+        : '<div class="cta"><a class="alt" href="' + fallback + '" target="_blank" rel="noopener">Chercher sur Cardmarket</a></div>';
+
+      row.innerHTML =
+        '<div class="thumb" style="background-image:url(' + "'" + img + "'" + ')" data-big="' + big + '" role="button" tabindex="0" aria-label="Agrandir"></div>' +
+        '<div class="meta">' +
+          '<div class="nm">' + escapeHtml(c.name||'') + '</div>' +
+          '<div class="sub"><span class="num">n° ' + escapeHtml(c.number||'?') + '</span> · ' + escapeHtml(setName) + (series?(' · ' + escapeHtml(series)):'') + '</div>' +
+          (c.rarity ? '<div class="badge">' + escapeHtml(c.rarity) + '</div>' : '') +
+        '</div>' +
+        '<div class="price">' + priceHtml + link + '</div>';
+
+      ledger.appendChild(row);
+    });
+    list.innerHTML = '';
+    list.appendChild(ledger);
+
+    // lightbox bindings
+    Array.prototype.forEach.call(list.querySelectorAll('.thumb'), function(t){
+      var open = function(){ var b=t.getAttribute('data-big'); if(b){ $('lbImg').src=b; $('lb').classList.add('on'); } };
+      t.addEventListener('click', open);
+      t.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g,function(m){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+  }
+
+  // lightbox close
+  $('lbx').addEventListener('click', function(){ $('lb').classList.remove('on'); $('lbImg').src=''; });
+  $('lb').addEventListener('click', function(e){ if(e.target === $('lb')){ $('lb').classList.remove('on'); $('lbImg').src=''; } });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ $('lb').classList.remove('on'); $('lbImg').src=''; } });
+
+  // enable OCR button once Tesseract is present, if a photo is already chosen
+  window.addEventListener('load', function(){
+    if(currentImageData && typeof Tesseract !== 'undefined'){ $('ocrBtn').disabled = false; }
+  });
+})();
+</script>
+</body>
+</html>
