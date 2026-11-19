@@ -258,7 +258,13 @@ footer { margin-top: 22px; color: var(--soft); font-size: .8rem; max-width: 80ch
   <main>
     <section class="panel" id="v-cartodle" aria-labelledby="h-cartodle" style="--accent: var(--eau-strong)">
       <h2 id="h-cartodle">Cartodle</h2>
-      <p class="help">Ajoute chaque carte que tu proposes au jeu, puis touche ses cases pour recopier les couleurs (gris, jaune, vert) et les flèches.</p>
+      <p class="help">Colle une capture de tes essais (Ctrl + V) : les cartes, les couleurs et les flèches se remplissent toutes seules. Tu peux aussi ajouter une carte à la main, puis toucher ses cases pour recopier les couleurs et les flèches.</p>
+      <div id="cd-capture" class="capture">
+        <button id="cd-shot" class="btn" type="button">Lire une capture</button>
+        <span class="muted small">La lecture se fait sur ton appareil. Tu peux aussi coller la capture (Ctrl + V) ou la glisser sur la page.</span>
+        <input id="cd-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" hidden>
+        <p id="cd-shot-status" class="small shot-status" aria-live="polite"></p>
+      </div>
       <div class="search">
         <label class="sr" for="cd-search">Carte jouée</label>
         <input id="cd-search" type="search" autocomplete="off" spellcheck="false" placeholder="Carte jouée : nom, extension ou année" role="combobox" aria-expanded="false" aria-controls="cd-results" aria-autocomplete="list">
@@ -9043,6 +9049,179 @@ return OCRAD;
   root.LocalOcr = Object.assign(root.LocalOcr || {}, { readVoisins });
   if (typeof module !== 'undefined') module.exports = root.LocalOcr;
 })(typeof window !== 'undefined' ? window : globalThis);
+
+// Lecture locale d’une capture Cartodle : cases, couleurs, flèches et texte de chaque essai.
+(function (root) {
+  'use strict';
+  const FILL = { x: [36, 36, 40], y: [251, 191, 36], g: [74, 222, 128] };
+  const ARROW = { x: [99, 99, 101], y: [180, 138, 30], g: [52, 156, 90] };
+  const TOL = { x: 9, y: 34, g: 34 };
+  const d3 = (r, g, b, c) => Math.abs(r - c[0]) + Math.abs(g - c[1]) + Math.abs(b - c[2]);
+  function comps(mask, w, h, minN) {
+    const lab = new Int32Array(w * h), out = [], st = []; let n = 0;
+    for (let s = 0; s < w * h; s++) {
+      if (!mask[s] || lab[s]) continue; n++;
+      let x0 = w, y0 = h, x1 = 0, y1 = 0, cnt = 0; st.length = 0; st.push(s); lab[s] = n;
+      const v = mask[s];
+      while (st.length) {
+        const p = st.pop(), x = p % w, y = (p / w) | 0; cnt++;
+        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+        if (x > 0 && mask[p - 1] === v && !lab[p - 1]) { lab[p - 1] = n; st.push(p - 1); }
+        if (x < w - 1 && mask[p + 1] === v && !lab[p + 1]) { lab[p + 1] = n; st.push(p + 1); }
+        if (y > 0 && mask[p - w] === v && !lab[p - w]) { lab[p - w] = n; st.push(p - w); }
+        if (y < h - 1 && mask[p + w] === v && !lab[p + w]) { lab[p + w] = n; st.push(p + w); }
+      }
+      if (cnt >= minN) out.push({ x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1, n: cnt, v, id: n });
+    }
+    return { out, lab };
+  }
+  const med = a => a.slice().sort((p, q) => p - q)[a.length >> 1];
+
+  // Trouve les rangées de 7 cases ; renvoie [{cells:[{x0,y0,w,h,c}]}] de haut en bas
+  function findRows(img) {
+    const W = img.w, H = img.h, d = img.d, mask = new Uint8Array(W * H);
+    for (let i = 0; i < W * H; i++) {
+      const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+      if (d3(r, g, b, FILL.x) <= 16) mask[i] = 1;
+      else if (d3(r, g, b, FILL.y) <= TOL.y) mask[i] = 2;
+      else if (d3(r, g, b, FILL.g) <= TOL.g) mask[i] = 3;
+    }
+    const { out } = comps(mask, W, H, 400);
+    let cells = out.filter(c => c.h >= 28 && c.w / c.h > 0.6 && c.w / c.h < 1.8 && c.n / (c.w * c.h) > 0.55);
+    // Regroupe par rangée (même hauteur et même haut)
+    cells.sort((a, b) => a.y0 - b.y0);
+    const rows = [];
+    for (const c of cells) {
+      const r = rows.find(r => Math.abs(r.y0 - c.y0) <= Math.max(4, r.h * 0.12) && Math.abs(r.h - c.h) <= Math.max(4, r.h * 0.15));
+      if (r) r.cells.push(c); else rows.push({ y0: c.y0, h: c.h, cells: [c] });
+    }
+    const res = [];
+    for (const r of rows) {
+      let cs = r.cells.sort((a, b) => a.x0 - b.x0);
+      const mw = med(cs.map(c => c.w));
+      cs = cs.filter(c => Math.abs(c.w - mw) <= mw * 0.25 || c.x0 + c.w >= W - 2 || c.x0 <= 1);
+      // cases régulièrement espacées : on garde la plus longue suite
+      if (cs.length > 7) cs = cs.slice(cs.length - 7);
+      if (cs.length !== 7) continue;
+      const pitch = med(cs.slice(1).map((c, k) => c.x0 - cs[k].x0));
+      if (cs.slice(1).some((c, k) => Math.abs(c.x0 - cs[k].x0 - pitch) > pitch * 0.2)) continue;
+      res.push({ cells: cs.map(c => ({ x0: c.x0, y0: c.y0, w: c.w, h: c.h, c: c.v === 2 ? 'y' : c.v === 3 ? 'g' : 'x' })) });
+    }
+    return res;
+  }
+
+  // Flèche en fond (moitié droite de la case) : 'up', 'down' ou ''
+  function readArrow(img, cell) {
+    const W = img.w, d = img.d, ac = ARROW[cell.c];
+    const x0 = cell.x0 + Math.floor(cell.w * 0.35), y0 = cell.y0 + Math.floor(cell.h * 0.2);
+    const w = cell.x0 + cell.w - x0, h = cell.y0 + cell.h - y0, m = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = ((y0 + y) * W + x0 + x) * 4;
+      if (d3(d[i], d[i + 1], d[i + 2], ac) <= 22) m[y * w + x] = 1;
+    }
+    const { out, lab } = comps(m, w, h, 5);
+    if (!out.length) return '';
+    const a = out.sort((p, q) => q.n - p.n)[0];
+    if (a.n < Math.max(30, cell.w * cell.h * 0.008)) return '';
+    // le texte peut couper la flèche en morceaux : on réunit les morceaux proches du plus gros
+    const keep = new Set(out.filter(o => o.n >= Math.max(5, a.n * 0.03) && o.x0 < a.x0 + a.w * 1.6 && o.x0 + o.w > a.x0 - a.w * 0.6 && o.y0 + o.h > a.y0 - a.h * 0.6 && o.y0 < a.y0 + a.h * 1.6).map(o => o.id));
+    let bx0 = w, bx1 = 0, by0 = h, by1 = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (keep.has(lab[y * w + x])) { if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
+    if (by1 - by0 + 1 < cell.h * 0.18) return '';
+    const widths = [];
+    for (let y = by0; y <= by1; y++) {
+      let lo = -1, hi = -1;
+      for (let x = bx0; x <= bx1; x++) if (keep.has(lab[y * w + x])) { if (lo < 0) lo = x; hi = x; }
+      widths.push(lo < 0 ? 0 : hi - lo + 1);
+    }
+    const k = Math.max(1, Math.floor(widths.length * 0.4));
+    const top = widths.slice(0, k).reduce((s, v) => s + v, 0), bot = widths.slice(-k).reduce((s, v) => s + v, 0);
+    if (top > bot * 1.2) return 'up';
+    if (bot > top * 1.2) return 'down';
+    return '';
+  }
+
+  // Texte de la case (sous l’étiquette), lu par Ocrad sur une copie agrandie
+  function readText(OCRAD, img, cell, frac) {
+    const W = img.w, d = img.d;
+    const y0 = cell.y0 + Math.floor(cell.h * (frac == null ? 0.3 : frac)), h = cell.y0 + cell.h - y0;
+    const x0 = cell.x0 + 2, w = cell.w - 4;
+    const scale = Math.max(2, Math.min(5, Math.round(36 / (cell.h * 0.13))));
+    const pad = 8, CW = w * scale + 2 * pad, CH = h * scale + 2 * pad, out = new Uint8ClampedArray(CW * CH * 4).fill(255);
+    const ink = cell.c === 'x' ? (r, g, b) => (r + g + b) / 3 > 150 : (r, g, b) => (r + g + b) / 3 < 95;
+    const px = (x, y) => { x = Math.max(0, Math.min(W - 1, x)); y = Math.max(0, Math.min(img.h - 1, y)); const i = (y * W + x) * 4; return [d[i], d[i + 1], d[i + 2]]; };
+    for (let y = 0; y < h * scale; y++) for (let x = 0; x < w * scale; x++) {
+      const fx = x0 + (x + 0.5) / scale - 0.5, fy = y0 + (y + 0.5) / scale - 0.5, ix = Math.floor(fx), iy = Math.floor(fy), ax = fx - ix, ay = fy - iy;
+      const a = px(ix, iy), b = px(ix + 1, iy), c = px(ix, iy + 1), e = px(ix + 1, iy + 1);
+      const v = [0, 1, 2].map(k => (a[k] * (1 - ax) + b[k] * ax) * (1 - ay) + (c[k] * (1 - ax) + e[k] * ax) * ay);
+      const o = ((y + pad) * CW + x + pad) * 4; out[o] = out[o + 1] = out[o + 2] = ink(v[0], v[1], v[2]) ? 0 : 255;
+    }
+    return OCRAD({ width: CW, height: CH, data: out });
+  }
+
+  const KEYS = ['pk', 'ty', 'st', 'hp', 'ra', 'ex', 'il'], ARROWED = { pk: 1, hp: 1, ra: 1, ex: 1 };
+  // Renvoie les essais du plus ancien au plus récent : [{fb, text:{pk,ty,...}}]
+  function readCartodle(OCRAD, img) {
+    const rows = findRows(img);
+    return rows.map(r => {
+      const fb = {}, text = {};
+      r.cells.forEach((cell, k) => {
+        const key = KEYS[k];
+        fb[key] = { c: cell.c };
+        if (ARROWED[key]) fb[key].a = cell.c === 'g' ? '' : readArrow(img, cell);
+        text[key] = OCRAD ? readText(OCRAD, img, cell) : '';
+      });
+      return { fb, text };
+    }).reverse();
+  }
+
+  // Retrouve la carte jouée d’après le texte lu dans ses cases ; renvoie [{i, cost}] du plus probable au moins probable
+  const CONF = ['il1|!jtf', 'o0dqa', 'e&c', 'rn', 'uv', 's5', 'b6h', 'g9', 'z2', 'mn', 'b8'];
+  const CLS = {}; CONF.forEach((s, k) => { for (const ch of s) (CLS[ch] = CLS[ch] || []).push(k); });
+  const near = (a, b) => (CLS[a] || []).some(k => (CLS[b] || []).includes(k));
+  function dist(a, b) {
+    const m = a.length, n = b.length; if (!m) return n; if (!n) return m;
+    let prev = new Float32Array(n + 1), cur = new Float32Array(n + 1);
+    for (let j = 0; j <= n; j++) prev[j] = j;
+    for (let i = 1; i <= m; i++) {
+      cur[0] = i;
+      for (let j = 1; j <= n; j++) { const c = a[i - 1] === b[j - 1] ? 0 : (a[i - 1] === '_' || near(a[i - 1], b[j - 1]) ? 0.4 : 1); cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + c); }
+      [prev, cur] = [cur, prev];
+    }
+    return prev[n];
+  }
+  const clean = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9_&|!]/g, '');
+  const rel = (a, b) => (a && b ? dist(a, b) / Math.max(a.length, b.length) : 1);
+  const digits = s => String(s || '').replace(/[oOdDQ]/g, '0').replace(/[lI|!\]\[iJ]/g, '1').replace(/[zZ]/g, '2').replace(/[sS]/g, '5').replace(/[bB]/g, '8').replace(/[gq]/g, '9').replace(/[G]/g, '6').replace(/[^0-9]/g, '');
+  const lines = s => String(s || '').split('\n').map(l => l.trim()).filter(l => l && clean(l).replace(/_/g, '').length >= 1 && !/^[l_ |.]*$/i.test(l));
+  function memo(list, read) { const m = new Map(); return k => { if (!m.has(k)) m.set(k, rel(read, clean(list(k)))); return m.get(k); }; }
+  function matchCartodleCard(D, text) {
+    const pk = lines(text.pk), ex = lines(text.ex);
+    const name = clean(pk[0] || ''), dex = digits(pk.slice(1).join(' ')).slice(-4);
+    const hp = digits(lines(text.hp)[0] || '');
+    let year = '', setTxt = ex;
+    if (ex.length > 1) { const y = digits(ex[ex.length - 1]); if (y.length >= 3) { year = y.slice(-4); setTxt = ex.slice(0, -1); } }
+    const setRead = clean(setTxt.join(''));
+    const fName = memo(k => k, name), fSet = memo(k => D.sets[k][1], setRead);
+    const fRar = memo(k => D.rarities[k], clean(lines(text.ra).join(''))), fIl = memo(k => D.illus[k] || '', clean(lines(text.il).join('')));
+    const fSt = memo(k => D.stages[k] || '', clean(lines(text.st).join('')));
+    const tyRead = clean(lines(text.ty).join(''));
+    const fTy = memo(k => D.tcgTypes.filter((t, j) => k & (1 << j)).join(''), tyRead);
+    const numCost = (read, val) => { if (!read) return 0.5; const v = String(val); if (read === v) return 0; return Math.min(1, rel(read, v) * 1.6); };
+    const out = [];
+    for (let i = 0; i < D.cards.length; i++) {
+      const c = D.cards[i], set = D.sets[c[1]];
+      let cost = fName(c[0]) * 4 + numCost(dex, c[3]) * 2.5 + fSet(c[1]) * 2.5 + numCost(hp, c[6]) * 1.5
+        + fRar(c[7]) * 1.2 + fIl(c[8]) * 1.2 + fSt(c[5]) * 0.6 + (tyRead ? fTy(c[4]) * 0.6 : 0.3);
+      if (year) cost += year === (set[2] || '').slice(0, 4) ? 0 : 0.8;
+      out.push({ i, cost });
+    }
+    out.sort((a, b) => a.cost - b.cost);
+    return out.slice(0, 8);
+  }
+  root.LocalOcr = Object.assign(root.LocalOcr || {}, { readCartodle, matchCartodleCard });
+  if (typeof module !== 'undefined') module.exports = root.LocalOcr;
+})(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>(function () {
   'use strict';
@@ -9406,6 +9585,45 @@ return OCRAD;
         || 'Les noms n’ont pas pu être lus. Réessaie, ou tape les noms à la main.', true);
     } finally { if (shotCtl === ctl) shotCtl = null; btn.disabled = false; if (cbtn) cbtn.disabled = false; }
   }
+  // Cartodle : couleurs et flèches lues sur l’image, carte retrouvée d’après le texte de ses cases
+  async function readCdShot(blob) {
+    const btn = $('#cd-shot'), status = $('#cd-shot-status');
+    btn.disabled = true; status.textContent = 'Lecture de la capture sur ton appareil…';
+    await new Promise(r => setTimeout(r, 50));
+    try {
+      if (!ocrEngine) ocrEngine = window.__ocradFactory();
+      const img = await pixelsOf(blob);
+      const rows = window.LocalOcr.readCartodle(ocrEngine, img);
+      if (!rows.length) { status.textContent = 'Je n’ai pas trouvé d’essai sur cette image. Prends une capture où les rangées de cases se voient en entier.'; return; }
+      const names = [], doubt = [];
+      let added = 0, updated = 0;
+      for (const r of rows) {
+        const m = window.LocalOcr.matchCartodleCard(D, r.text);
+        if (!m.length) continue;
+        const i = m[0].i, label = D.cards[i][0] + ' (' + H.cardSet(i)[1] + ')';
+        if (m[0].cost > 4.5 || (m[1] && m[1].cost - m[0].cost < 0.6)) doubt.push(label);
+        const prev = S.cd.hist.find(h => h.card === i);
+        if (prev) { prev.fb = r.fb; updated++; } else { S.cd.hist.push({ card: i, fb: r.fb }); added++; }
+        names.push(label);
+      }
+      commitCd();
+      let msg = plural(names.length, 'essai lu', 'essais lus') + ' : ' + names.join(', ') + '.';
+      if (updated && !added) msg += updated > 1 ? ' Ces essais étaient déjà là : leurs couleurs ont été mises à jour.' : ' Cet essai était déjà là : ses couleurs ont été mises à jour.';
+      if (doubt.length) msg += ' À vérifier : ' + doubt.join(', ') + ' (si ce n’est pas la bonne carte, retire l’essai et ajoute la à la main).';
+      else msg += ' Jette un œil aux couleurs avant de jouer.';
+      status.textContent = msg;
+    } catch (e) {
+      status.textContent = 'Cette capture n’a pas pu être lue : ajoute les cartes à la main.';
+    } finally { btn.disabled = false; }
+  }
+  function wireCdShot() {
+    const file = $('#cd-file'), panel = $('#v-cartodle');
+    $('#cd-shot').addEventListener('click', () => file.click());
+    file.addEventListener('change', () => { const f = firstImage(file.files); file.value = ''; if (f) readCdShot(f); });
+    panel.addEventListener('dragover', e => { e.preventDefault(); panel.classList.add('drop'); });
+    panel.addEventListener('dragleave', e => { if (!panel.contains(e.relatedTarget)) panel.classList.remove('drop'); });
+    panel.addEventListener('drop', e => { panel.classList.remove('drop'); const f = firstImage(e.dataTransfer && e.dataTransfer.files); if (f) { e.preventDefault(); readCdShot(f); } });
+  }
   function handleShot(key, blob) {
     if (SHOT[key].local) return readLocal(key, blob);
     if (sampleFn) return readClaude(key, blob);
@@ -9421,8 +9639,13 @@ return OCRAD;
     panel.addEventListener('drop', e => { panel.classList.remove('drop'); const f = firstImage(e.dataTransfer && e.dataTransfer.files); if (f && usable()) { e.preventDefault(); handleShot(key, f); } });
   }
   async function setupShots() {
-    wireShot('cx'); wireShot('cl');
+    wireShot('cx'); wireShot('cl'); wireCdShot();
     document.addEventListener('paste', e => {
+      if (!VIEWS.includes(location.hash.slice(1)) || location.hash.slice(1) === 'cartodle') {
+        const f = firstImage(e.clipboardData && e.clipboardData.files);
+        if (f) { e.preventDefault(); readCdShot(f); }
+        return;
+      }
       const key = Object.keys(SHOT).find(k => SHOT[k].view === location.hash.slice(1));
       const f = key && firstImage(e.clipboardData && e.clipboardData.files);
       if (f && (SHOT[key].local || sampleFn)) { e.preventDefault(); handleShot(key, f); }
