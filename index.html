@@ -504,12 +504,19 @@ footer { margin-top: 22px; color: var(--soft); font-size: .8rem; max-width: 80ch
   function firstLetter(s) { return L.norm(s).charAt(0).toUpperCase(); }
   function pop(m) { let c = 0; while (m) { m &= m - 1; c++; } return c; }
   // Critères possibles ; un critère n’est retenu que s’il colle à exactement 4 des 16 Pokémon
+  let CT = null;
+  function cardTypeCounts(id) {
+    if (!CT) { CT = new Map(); D.cards.forEach(c => { if (!c[3]) return; let a = CT.get(c[3]); if (!a) { a = new Array(D.tcgTypes.length).fill(0); CT.set(c[3], a); } for (let k = 0; k < a.length; k++) if (c[4] & (1 << k)) a[k]++; }); }
+    return CT.get(id) || [];
+  }
   L.connexionGroups = function (ids) {
     const crit = new Map();
     const add = (key, label, kind, i) => { let c = crit.get(key); if (!c) { c = { label, kind, mask: 0 }; crit.set(key, c); } c.mask |= (1 << i); };
     ids.forEach((id, i) => {
       const s = L.sp(id);
       add('tt:' + s[6], 'Type ' + D.tcgTypes[s[6]], 'normal', i);
+      // le jeu compte aussi les autres types qu'a eus le Pokémon sur ses cartes (au moins deux cartes)
+      cardTypeCounts(id).forEach((n, k) => { if (n >= 2 && k !== s[6]) add('tt:' + k, 'Type ' + D.tcgTypes[k], 'normal', i); });
       s[2].forEach(t => add('tg:' + t, 'Type ' + D.types[t] + ' (type du jeu vidéo)', 'alt', i));
       add('g:' + s[1], 'Génération ' + s[1] + ' (' + REGIONS[s[1]] + ')', 'normal', i);
       add('p:' + s[4], POS_LABEL[D.pos[s[4]]], 'normal', i);
