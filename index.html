@@ -15,7 +15,7 @@
   --plante: #3E9A4D; --feu: #E0612A; --eau: #2C78D4; --elec: #E2B000; --psy: #8946BF; --combat: #A55A2C;
   --plante-strong: #2B7A3A; --feu-strong: #B2431B; --eau-strong: #1E5CAA; --psy-strong: #6C349E;
   --vb-felt: #2F7A55; --vb-felt-edge: #215A3E; --vb-tile: #3E956A; --vb-tile-ink: #F2FBF5; --vb-tile-dim: #5F7F6D;
-  --vb-card: #FFF8E8; --vb-card-ink: #1B1A15; --vb-gold: #F2C14E; --vb-gold-ink: #3A2A00; --vb-volt: #D8432F; --vb-ring: #FFE27A;
+  --vb-card: #FFF8E8; --vb-card-ink: #1B1A15; --vb-gold: #F2C14E; --vb-gold-ink: #3A2A00; --vb-volt: #D8432F; --vb-ring: #FFE27A; --vb-doubt: #D27200;
   color-scheme: light;
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
@@ -28,7 +28,7 @@
     --ok: #23874C; --near: #F2C230; --near-ink: #2A2000; --no: #4A5480; --bad: #FF8A80; --focus: #8DB8FF;
     --plante-strong: #2F8541; --feu-strong: #C24B1F; --eau-strong: #2A68BF; --psy-strong: #7A3DB0;
     --vb-felt: #1F5A3E; --vb-felt-edge: #163F2C; --vb-tile: #2C7350; --vb-tile-ink: #EAF7EF; --vb-tile-dim: #3F5A4B;
-    --vb-card: #F4EBD3; --vb-card-ink: #1B1A15; --vb-gold: #E9B53C; --vb-gold-ink: #2E2200; --vb-volt: #E0533F; --vb-ring: #FFD84D;
+    --vb-card: #F4EBD3; --vb-card-ink: #1B1A15; --vb-gold: #E9B53C; --vb-gold-ink: #2E2200; --vb-volt: #E0533F; --vb-ring: #FFD84D; --vb-doubt: #F5A33B;
     color-scheme: dark;
   }
 }
@@ -38,7 +38,7 @@
   --ok: #23874C; --near: #F2C230; --near-ink: #2A2000; --no: #4A5480; --bad: #FF8A80; --focus: #8DB8FF;
   --plante-strong: #2F8541; --feu-strong: #C24B1F; --eau-strong: #2A68BF; --psy-strong: #7A3DB0;
   --vb-felt: #1F5A3E; --vb-felt-edge: #163F2C; --vb-tile: #2C7350; --vb-tile-ink: #EAF7EF; --vb-tile-dim: #3F5A4B;
-  --vb-card: #F4EBD3; --vb-card-ink: #1B1A15; --vb-gold: #E9B53C; --vb-gold-ink: #2E2200; --vb-volt: #E0533F; --vb-ring: #FFD84D;
+  --vb-card: #F4EBD3; --vb-card-ink: #1B1A15; --vb-gold: #E9B53C; --vb-gold-ink: #2E2200; --vb-volt: #E0533F; --vb-ring: #FFD84D; --vb-doubt: #F5A33B;
   color-scheme: dark;
 }
 html { scroll-padding-top: env(safe-area-inset-top, 0px); }
@@ -198,6 +198,15 @@ textarea:focus { outline: none; border-color: var(--accent); }
 .vb-advice { font-size: 1.2rem; font-weight: 700; line-height: 1.3; margin: 0 0 8px; }
 .vb-facts { color: var(--soft); margin: 0 0 6px; }
 #vb-status .warn { margin-top: 10px; }
+.vb-clue input.doubt { box-shadow: inset 0 0 0 3px var(--vb-doubt); background: color-mix(in srgb, var(--vb-doubt) 22%, transparent); }
+.vb-tile.doubt { outline: 3px solid var(--vb-doubt); outline-offset: 2px; z-index: 1; }
+.vb-asks { display: grid; gap: 12px; margin: 14px 0 0; }
+.vb-ask { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.vb-ask .vb-what { font-weight: 700; flex: 1 1 100%; }
+.vb-ask button { font: inherit; font-weight: 800; font-size: 18px; min-width: 56px; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 2px solid var(--vb-doubt); background: transparent; color: var(--ink); cursor: pointer; font-variant-numeric: tabular-nums; }
+.vb-ask button:hover { background: color-mix(in srgb, var(--vb-doubt) 22%, transparent); }
+.vb-ask em { color: var(--soft); font-style: normal; }
+
 .vb-mode { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
 .vb-mode button { font: inherit; font-weight: 700; font-size: .92rem; border-radius: 999px; padding: 7px 14px; border: 2px solid var(--rule); background: transparent; color: var(--ink); cursor: pointer; }
 .vb-mode button[aria-pressed="true"] { background: var(--vb-felt); border-color: var(--vb-felt-edge); color: #fff; }
@@ -374,6 +383,7 @@ footer { margin-top: 22px; color: var(--soft); font-size: .8rem; max-width: 80ch
             <summary>Comment l’utiliser</summary>
             <ol class="vb-howto">
               <li>Colle une capture de toute la grille (Ctrl + V), dépose l’image sur la page, ou touche « Lire une capture ». Sinon, recopie pour chaque ligne et chaque colonne le total de points en haut et le nombre de Voltorbe en bas.</li>
+              <li>Si un chiffre de la capture n’est pas net, l’aide ne devine pas : elle te demande de vérifier ce nombre dans le jeu avant de donner ses conseils. Touche la bonne valeur, ou corrige la case entourée en orange.</li>
               <li>Touche une carte que tu as retournée dans le jeu pour indiquer son chiffre : 1, puis 2, puis 3. Touche encore pour la cacher à nouveau.</li>
               <li>Joue le coup conseillé dans le jeu, recopie le chiffre obtenu ici, et recommence jusqu’à la fin de la grille.</li>
             </ol>
@@ -633,7 +643,8 @@ footer { margin-top: 22px; color: var(--soft); font-size: .8rem; max-width: 80ch
       if (fb.ex.a === 'down' && sc[2] > sg[2]) return false;
     }
     // Illustrateur
-    if (fb.il.c === 'g' ? c[8] !== g[8] : c[8] === g[8]) return false;
+    // Illustrateur inconnu (index 0) : on ne peut rien conclure
+    if (c[8] && g[8] && (fb.il.c === 'g' ? c[8] !== g[8] : c[8] === g[8])) return false;
     return true;
   };
   L.cdCandidates = function (hist, opt) {
@@ -9676,7 +9687,7 @@ return OCRAD;
 </script>
 <script>(function () {
 'use strict';
-/* Assistant Voltorbe : solveur et lecture de capture repris tels quels du fichier fourni, interface adaptée à cette page. */
+/* Assistant Voltorbe : solveur et lecture de capture repris de l'Assistant Voltorbe, avec vérification des nombres douteux. */
 // ---------- Cœur du solveur ----------
 function rowOptions(sum, vol, known) {
   const out = [], cur = [0,0,0,0,0];
@@ -9760,6 +9771,260 @@ function bestMove(sols, known, budget) {
   return P(sols.map((_, i) => i));
 }
 
+// ---------- État et interface ----------
+const STORE = 'voltorbe-assistant-v1';
+let mode = 'sur';
+try { mode = localStorage.getItem('voltorbe-mode') === 'best' ? 'best' : 'sur'; } catch (e) {}
+function setMode(m) {
+  mode = m;
+  try { localStorage.setItem('voltorbe-mode', m); } catch (e) {}
+  document.getElementById('vb-mode-safe').setAttribute('aria-pressed', String(m === 'sur'));
+  document.getElementById('vb-mode-best').setAttribute('aria-pressed', String(m === 'best'));
+}
+setMode(mode);
+document.getElementById('vb-mode-safe').addEventListener('click', () => { setMode('sur'); schedule(); });
+document.getElementById('vb-mode-best').addEventListener('click', () => { setMode('best'); schedule(); });
+let state = { rows: Array.from({ length: 5 }, () => [null, null]), cols: Array.from({ length: 5 }, () => [null, null]), known: new Array(25).fill(0) };
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
+  if (saved && Array.isArray(saved.known) && saved.known.length === 25) state = saved;
+} catch (e) {}
+function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} }
+
+const board = document.getElementById('vb-board');
+const statusEl = document.getElementById('vb-status');
+const hintEl = document.getElementById('vb-hint');
+const tiles = [], inputs = { rows: [], cols: [] };
+
+function makeClue(kind, idx) {
+  const box = document.createElement('div'); box.className = 'vb-clue';
+  const label = kind === 'rows' ? 'Ligne ' + (idx + 1) : 'Colonne ' + (idx + 1);
+  const pts = document.createElement('input');
+  pts.type = 'number'; pts.inputMode = 'numeric'; pts.min = 0; pts.max = 15; pts.placeholder = 'pts';
+  pts.setAttribute('aria-label', label + ', total de points');
+  const vrow = document.createElement('div'); vrow.className = 'vb-vrow';
+  const icon = document.createElement('span'); icon.className = 'vb-vicon'; icon.setAttribute('aria-hidden', 'true');
+  const vol = document.createElement('input');
+  vol.type = 'number'; vol.inputMode = 'numeric'; vol.min = 0; vol.max = 5; vol.placeholder = 'V';
+  vol.setAttribute('aria-label', label + ', nombre de Voltorbe');
+  vrow.append(icon, vol); box.append(pts, vrow);
+  [pts, vol].forEach((el, j) => el.addEventListener('input', () => {
+    const v = el.value === '' ? null : parseInt(el.value, 10);
+    state[kind][idx][j] = Number.isFinite(v) ? v : null;
+    if (state.doubts) state.doubts = state.doubts.filter(d => !(d.k === kind && d.idx === idx && d.j === j));
+    save(); schedule();
+  }));
+  inputs[kind].push([pts, vol]);
+  return box;
+}
+
+for (let r = 0; r < 5; r++) {
+  for (let c = 0; c < 5; c++) {
+    const i = r * 5 + c;
+    const t = document.createElement('button'); t.type = 'button'; t.className = 'vb-tile';
+    t.innerHTML = '<span class="vb-big"></span><span class="vb-small"></span><span class="vb-bar"></span>';
+    t.addEventListener('click', () => {
+      state.known[i] = (state.known[i] + 1) % 4;
+      if (state.doubts) state.doubts = state.doubts.filter(d => d.card !== i);
+      save(); schedule();
+    });
+    tiles.push(t); board.appendChild(t);
+  }
+  board.appendChild(makeClue('rows', r));
+}
+for (let c = 0; c < 5; c++) board.appendChild(makeClue('cols', c));
+const corner = document.createElement('div'); corner.className = 'vb-corner'; board.appendChild(corner);
+
+function fillInputs() {
+  ['rows', 'cols'].forEach(k => inputs[k].forEach((pair, idx) => pair.forEach((el, j) => {
+    const v = state[k][idx][j]; el.value = v === null || v === undefined ? '' : v;
+  })));
+}
+document.getElementById('vb-reset').addEventListener('click', () => {
+  state = { rows: Array.from({ length: 5 }, () => [null, null]), cols: Array.from({ length: 5 }, () => [null, null]), known: new Array(25).fill(0), doubts: [] };
+  save(); fillInputs(); schedule();
+});
+document.getElementById('vb-clear').addEventListener('click', () => {
+  state.known = new Array(25).fill(0);
+  if (state.doubts) state.doubts = state.doubts.filter(d => d.card === undefined);
+  save(); schedule();
+});
+
+const pos = i => 'ligne ' + (Math.floor(i / 5) + 1) + ', colonne ' + (i % 5 + 1);
+const pct = x => Math.round(x * 100) + ' %';
+
+function setTile(i, cls, big, small, risk, aria) {
+  const t = tiles[i];
+  t.className = 'vb-tile' + (cls ? ' ' + cls : '');
+  t.querySelector('.vb-big').textContent = big;
+  t.querySelector('.vb-small').textContent = small;
+  t.querySelector('.vb-bar').style.width = risk ? Math.round(risk * 100) + '%' : '0';
+  t.setAttribute('aria-label', 'Carte ' + pos(i) + ' : ' + aria);
+}
+function plainBoard() {
+  for (let i = 0; i < 25; i++) {
+    const k = state.known[i];
+    if (k) setTile(i, 'revealed' + (k >= 2 ? ' high' : ''), String(k), '', 0, 'retournée, ' + k);
+    else setTile(i, 'idle', '?', '', 0, 'cachée');
+  }
+}
+function markMissing() {
+  let missing = 0;
+  ['rows', 'cols'].forEach(k => inputs[k].forEach((pair, idx) => pair.forEach((el, j) => {
+    const val = state[k][idx][j];
+    const empty = val === null || val === undefined;
+    el.classList.toggle('missing', empty); if (empty) missing++;
+  })));
+  return missing;
+}
+function lineError() {
+  const missing = markMissing();
+  if (missing) return { incomplete: true, missing };
+  for (const k of ['rows', 'cols']) for (let idx = 0; idx < 5; idx++) {
+    const [s, v] = state[k][idx];
+    const name = (k === 'rows' ? 'Ligne ' : 'Colonne ') + (idx + 1);
+    if (v < 0 || v > 5 || s < 0) return { msg: name + ' : nombre de Voltorbe impossible.' };
+    const free = 5 - v;
+    if (s < free || s > free * 3) return { msg: name + ' : ' + s + ' points avec ' + v + ' Voltorbe, c’est impossible. Vérifie ces deux nombres.' };
+  }
+  const sr = state.rows.reduce((a, x) => a + x[0], 0), sc = state.cols.reduce((a, x) => a + x[0], 0);
+  const vr = state.rows.reduce((a, x) => a + x[1], 0), vc = state.cols.reduce((a, x) => a + x[1], 0);
+  if (sr !== sc) return { msg: 'Les lignes totalisent ' + sr + ' points et les colonnes ' + sc + ' : une case d’indice est mal recopiée.' };
+  if (vr !== vc) return { msg: 'Les lignes comptent ' + vr + ' Voltorbe et les colonnes ' + vc + ' : une case d’indice est mal recopiée.' };
+  return null;
+}
+
+// ---------- Vérification des nombres douteux d'une capture ----------
+function markDoubts() {
+  const ds = state.doubts || [];
+  ['rows', 'cols'].forEach(k => inputs[k].forEach((pair, idx) => pair.forEach((el, j) => {
+    el.classList.toggle('doubt', ds.some(d => d.k === k && d.idx === idx && d.j === j));
+  })));
+}
+const doubtName = d => d.card !== undefined ? 'Carte ' + pos(d.card) : (d.k === 'rows' ? 'Ligne ' : 'Colonne ') + (d.idx + 1) + (d.j === 0 ? ' : points' : ' : Voltorbe');
+function doubtQuestion(d) {
+  const o = d.options.join(' ou ');
+  if (d.card !== undefined) return 'la carte ' + pos(d.card) + ' est-elle un ' + o + ' ?';
+  const line = (d.k === 'rows' ? 'la ligne ' : 'la colonne ') + (d.idx + 1);
+  return d.j === 0 ? line + ' fait-elle ' + o + ' points ?' : line + ' a-t-elle ' + o + ' Voltorbe ?';
+}
+function showDoubts() {
+  plainBoard(); markMissing();
+  const ds = state.doubts;
+  ds.forEach(d => { if (d.card !== undefined) tiles[d.card].classList.add('doubt'); });
+  let html = '<p class="vb-advice">' + (ds.length > 1 ? 'Vérifie ces ' + ds.length + ' nombres avant de jouer.' : 'Vérifie ce nombre avant de jouer.') + '</p>';
+  html += '<p class="vb-facts">La capture laisse un doute. Regarde le jeu et touche la bonne valeur, ou corrige la case entourée en orange.</p><div class="vb-asks">';
+  ds.forEach((d, n) => {
+    html += '<div class="vb-ask"><span class="vb-what">' + doubtName(d) + '</span>';
+    if (d.options && d.options.length) d.options.forEach(v => { html += '<button type="button" data-d="' + n + '" data-v="' + v + '">' + (d.card !== undefined && v === 0 ? 'cachée' : v) + '</button>'; });
+    else html += '<em>illisible : recopie-le dans la case entourée en orange</em>';
+    html += '</div>';
+  });
+  statusEl.innerHTML = html + '</div>';
+  const first = ds[0];
+  hintEl.textContent = ds.length === 1 && first.options && first.options.length > 1
+    ? 'Avant de jouer : ' + doubtQuestion(first)
+    : 'Avant de jouer, vérifie ' + (ds.length > 1 ? 'les ' + ds.length + ' nombres entourés' : 'le nombre entouré') + ' en orange.';
+}
+statusEl.addEventListener('click', e => {
+  const b = e.target.closest('button[data-d]'); if (!b || !state.doubts) return;
+  const d = state.doubts[+b.dataset.d], v = +b.dataset.v; if (!d) return;
+  if (d.card !== undefined) state.known[d.card] = v; else state[d.k][d.idx][d.j] = v;
+  state.doubts = state.doubts.filter(x => x !== d);
+  save(); fillInputs(); schedule();
+});
+
+let timer = null, token = 0;
+function schedule() { clearTimeout(timer); plainBoard(); timer = setTimeout(run, 120); }
+
+function run() {
+  const my = ++token;
+  markDoubts();
+  if (state.doubts && state.doubts.length) { showDoubts(); return; }
+  const err = lineError();
+  if (err) {
+    plainBoard();
+    statusEl.innerHTML = err.incomplete
+      ? '<p class="vb-advice">Il manque ' + err.missing + (err.missing > 1 ? ' nombres' : ' nombre') + ' dans les cases d’indice.</p><p class="vb-facts">Le calcul démarre dès que les 20 nombres sont remplis : le total de points et le nombre de Voltorbe (même 0) pour chaque ligne et chaque colonne. Les cases à remplir sont entourées en rouge.</p>'
+      : '<p class="warn">' + err.msg + '</p>';
+    hintEl.textContent = err.incomplete ? 'Il manque ' + err.missing + (err.missing > 1 ? ' nombres' : ' nombre') + ', entourés en rouge. Mets 0 quand une ligne ou une colonne n’a aucun Voltorbe.' : err.msg;
+    return;
+  }
+  const known = state.known.slice();
+  const { sols, overflow } = enumerate(state.rows, state.cols, known, 250000);
+  if (!sols.length) {
+    plainBoard();
+    statusEl.innerHTML = '<p class="warn">Aucune grille ne correspond. Vérifie les indices et les chiffres des cartes retournées.</p>';
+    hintEl.textContent = 'Aucune grille ne correspond : vérifie ta saisie.';
+    return;
+  }
+  const { cells, finished } = analyse(sols, known);
+  const sure = [];
+  for (let i = 0; i < 25; i++) {
+    const k = known[i], c = cells[i];
+    if (k) { setTile(i, 'revealed' + (k >= 2 ? ' high' : ''), String(k), '', 0, 'retournée, ' + k); continue; }
+    const [n0, n1, n2, n3] = c.cnt, n = sols.length;
+    if (n0 === n) setTile(i, 'volt', 'V', 'Voltorbe', 0, 'Voltorbe certain');
+    else if (n2 + n3 === n) { sure.push(i); setTile(i, 'sure', n2 === n ? '2' : n3 === n ? '3' : '2 ou 3', 'sûr', 0, n2 === n ? '2 garanti' : n3 === n ? '3 garanti' : '2 ou 3 garanti'); }
+    else if (n1 === n) setTile(i, 'dim', '1', 'rien', 0, 'un 1 certain, rien à gagner');
+    else if (n2 + n3 === 0) setTile(i, 'dim', pct(c.risk), '1 ou V', c.risk, 'seulement 1 ou Voltorbe, risque ' + pct(c.risk));
+    else setTile(i, '', pct(c.risk), 'gain ' + pct(c.gain), c.risk, 'risque ' + pct(c.risk) + ', 2 ou 3 à ' + pct(c.gain));
+  }
+  const count = (overflow ? 'Plus de 250 000' : sols.length.toLocaleString('fr-FR')) + (sols.length > 1 ? ' grilles possibles' : ' grille possible');
+
+  if (finished) {
+    statusEl.innerHTML = '<p class="vb-advice">Grille finie : tous les 2 et 3 sont retournés.</p><p class="vb-facts">Passe à la grille suivante et touche « Nouvelle grille ».</p>';
+    hintEl.textContent = 'Grille finie : tous les 2 et 3 sont retournés.';
+    return;
+  }
+  if (sure.length) {
+    sure.forEach(i => tiles[i].classList.add('reco'));
+    statusEl.innerHTML = '<p class="vb-advice">Retourne les cartes jaunes : ' + (sure.length > 1 ? 'elles sont garanties.' : 'elle est garantie.') + '</p><p class="vb-facts">' + count + '. Après les avoir retournées, recopie leurs chiffres ici.</p>';
+    hintEl.textContent = 'Retourne les cartes jaunes : ' + (sure.length > 1 ? 'elles sont garanties.' : 'elle est garantie.');
+    return;
+  }
+  // Mode « le plus sûr » : la case avec le moins de risque de Voltorbe
+  if (mode === 'sur') {
+    let s = -1;
+    for (let i = 0; i < 25; i++) {
+      if (known[i]) continue; const c = cells[i];
+      if (c.risk === 1 || c.cnt[1] === sols.length) continue;
+      if (s < 0 || c.risk < cells[s].risk - 1e-9 || (Math.abs(c.risk - cells[s].risk) < 1e-9 && c.gain > cells[s].gain)) s = i;
+    }
+    if (s >= 0) { showAdvice(s, cells[s].risk, cells[s].gain, null, count, false, true); return; }
+  }
+  // Conseil rapide en attendant le calcul complet
+  let h = -1;
+  for (let i = 0; i < 25; i++) {
+    if (known[i]) continue; const c = cells[i];
+    if (c.gain === 0 || c.risk === 1) continue;
+    if (h < 0 || c.risk < cells[h].risk - 1e-9 || (Math.abs(c.risk - cells[h].risk) < 1e-9 && c.gain > cells[h].gain)) h = i;
+  }
+  showAdvice(h, cells[h].risk, cells[h].gain, null, count, sols.length <= 150);
+  if (sols.length <= 150) {
+    setTimeout(() => {
+      if (my !== token) return;
+      try {
+        const b = bestMove(sols, known, 300000);
+        if (my !== token || b.c < 0) return;
+        showAdvice(b.c, cells[b.c].risk, cells[b.c].gain, b.p, count, false);
+      } catch (e) { if (my === token) showAdvice(h, cells[h].risk, cells[h].gain, null, count, false); }
+    }, 30);
+  }
+}
+function showAdvice(i, risk, gain, pFinish, count, computing, safe) {
+  tiles.forEach(t => t.classList.remove('reco'));
+  tiles[i].classList.add('reco');
+  const label = safe ? 'Case la plus sûre' : 'Coup conseillé';
+  let html = '<p class="vb-advice">' + label + ' : ' + pos(i) + '.</p>';
+  html += '<p class="vb-facts">Risque de Voltorbe ' + pct(risk) + ', chances d’un 2 ou d’un 3 : ' + pct(gain) + '.</p>';
+  if (safe && gain === 0) html += '<p class="vb-facts">Elle ne peut cacher qu’un 1 ou un Voltorbe : elle ne rapporte rien, mais elle donne des indices pour la suite.</p>';
+  html += '<p class="vb-facts">' + count + (pFinish !== null ? ', chances de finir la grille en jouant au mieux : ' + pct(pFinish) : '') + (computing ? ', calcul du meilleur coup en cours…' : '') + '.</p>';
+  if (risk > 0.3) html += '<p class="warn">Coup risqué. Si tu tiens à tes jetons de grille, « S’arrêter là » peut être plus sage.</p>';
+  statusEl.innerHTML = html;
+  hintEl.textContent = label + ' : ' + pos(i) + ', ' + pct(risk) + ' de risque.';
+}
+
 // ---------- Lecture d’une capture d’écran, faite sur ton appareil ----------
 const WHITE_L = 175, WHITE_S = 75;
 // Lecture locale d'une capture Voltorbe : détection de la grille et reconnaissance des chiffres
@@ -9813,64 +10078,117 @@ function ocrGrid(img, TPL, scaled) {
     return { w, h, px };
   }
   const near = (tpl, v, keys) => {
-    const ds = keys.map(k => { const t = tpl[k]; let s = 0; for (let i = 0; i < t.length; i++) { const e = t[i] - v[i]; s += e * e; } return { k: Number(k), dist: s }; });
+    const ds = keys.filter(k => tpl[k]).map(k => { const t = tpl[k]; let s = 0; for (let i = 0; i < t.length; i++) { const e = t[i] - v[i]; s += e * e; } return { k: Number(k), dist: s }; });
     ds.sort((a, b) => a.dist - b.dist);
     return ds;
   };
+  const LOW = 0.8;                       // au-delà, le chiffre ressemble trop au deuxième choix
+  const ratio = ds => ds.length > 1 && ds[1].dist > 0 ? ds[0].dist / ds[1].dist : 0;
+  const doubts = [];
+  // Cartes retournées
   const known = [];
-  let worst = 0;
   for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
     const ci = cardInfo(crop(tx[c], ty[r]));
     if (ci === null) { known.push(0); continue; }
-    if (ci === false) return null;
-    const m = near(TPL.card, ci, ['1', '2', '3']); worst = Math.max(worst, m[0].dist); known.push(m[0].k);
+    if (ci === false) { known.push(0); doubts.push({ card: r * 5 + c, options: [0, 1, 2, 3] }); continue; }
+    const m = near(TPL.card, ci, ['1', '2', '3']);
+    known.push(m[0].k);
+    if (ratio(m) > 0.7) doubts.push({ card: r * 5 + c, options: [m[0].k, m[1].k] });
   }
-  const botT = Object.assign({}, TPL.bot, { 5: TPL.top['5'] });
-  // Chaque case d'indice : emplacements (dizaine, unité, Voltorbe) avec leurs candidats classés
-  function readClue(t) {
+  // Cases d'indice : chaque champ (points, Voltorbe) garde ses lectures possibles, de la plus probable à la moins probable
+  const TENS = ['0', '1'], UNITS = Object.keys(TPL.top), VOLS = ['0', '1', '2', '3', '4', '5'];
+  const botT = Object.assign({}, TPL.bot); if (!botT['5'] && TPL.top['5']) botT['5'] = TPL.top['5'];
+  const fields = [];
+  for (let n = 0; n < 10; n++) {
+    const t = n < 5 ? crop(tx[5], ty[n]) : crop(tx[n - 5], ty[5]);
+    const k = n < 5 ? 'rows' : 'cols', idx = n % 5;
     const ci = clueInfo(t);
-    if (!ci) return null;
-    let tops = ci.tops;
-    if (tops.length > 2) tops = tops.slice().sort((a, b) => b.n - a.n).slice(0, 2).sort((a, b) => a.x - b.x);
-    if (!tops.length || !ci.bot) return null;
-    const slots = tops.map(g => near(TPL.top, g.v, Object.keys(TPL.top)));
-    if (slots.length === 1) slots.unshift([{ k: 0, dist: 0 }]);
-    slots.push(near(botT, ci.bot, Object.keys(botT)));
-    return slots;
-  }
-  const clues = [];
-  for (let r = 0; r < 5; r++) { const v = readClue(crop(tx[5], ty[r])); if (!v) return null; clues.push(v); }
-  for (let c = 0; c < 5; c++) { const v = readClue(crop(tx[c], ty[5])); if (!v) return null; clues.push(v); }
-  const pick = clues.map(sl => sl.map(() => 0));
-  const value = () => clues.map((sl, i) => [sl[0][pick[i][0]].k * 10 + sl[1][pick[i][1]].k, sl[2][pick[i][2]].k]);
-  const coherent = vals => {
-    const R = vals.slice(0, 5), C = vals.slice(5);
-    const sum = (a, j) => a.reduce((s, p) => s + p[j], 0);
-    if (sum(R, 0) !== sum(C, 0) || sum(R, 1) !== sum(C, 1)) return false;
-    return vals.every(([s, v]) => v <= 5 && s >= 5 - v && s <= 3 * (5 - v));
-  };
-  let vals = value(), corrected = false;
-  if (!coherent(vals)) {
-    // on essaie de remplacer un ou deux chiffres douteux par leur deuxième lecture
-    const alts = [];
-    clues.forEach((sl, i) => sl.forEach((cands, j) => { if (cands.length > 1) alts.push({ i, j, cost: cands[1].dist - cands[0].dist }); }));
-    alts.sort((a, b) => a.cost - b.cost);
-    let found = null;
-    for (const a of alts) { pick[a.i][a.j] = 1; if (coherent(value())) { found = [a]; break; } pick[a.i][a.j] = 0; }
-    if (!found) {
-      let bestCost = Infinity;
-      for (let x = 0; x < alts.length; x++) for (let y = x + 1; y < alts.length; y++) {
-        const a = alts[x], b = alts[y]; if (a.cost + b.cost >= bestCost) continue;
-        pick[a.i][a.j] = 1; pick[b.i][b.j] = 1;
-        if (coherent(value())) { bestCost = a.cost + b.cost; found = [a, b]; }
-        pick[a.i][a.j] = 0; pick[b.i][b.j] = 0;
+    let pc = null, pLow = false, vc = null, vLow = false;
+    if (ci) {
+      let tops = ci.tops;
+      if (tops.length > 2) tops = tops.slice().sort((a, b) => b.n - a.n).slice(0, 2).sort((a, b) => a.x - b.x);
+      if (tops.length === 2) {
+        const d = near(TPL.top, tops[0].v, TENS), u = near(TPL.top, tops[1].v, UNITS);
+        pc = [];
+        for (const a of d.slice(0, 2)) for (const b of u.slice(0, 3)) {
+          const val = a.k * 10 + b.k;
+          if (val <= 15) pc.push({ val, cost: (a.dist - d[0].dist) + (b.dist - u[0].dist) });
+        }
+        pc.sort((x, y) => x.cost - y.cost);
+        if (!pc.length) pc = null;
+        pLow = Math.max(ratio(d), ratio(u)) > LOW;
       }
-      if (found) found.forEach(a => { pick[a.i][a.j] = 1; });
+      if (ci.bot) { const b = near(botT, ci.bot, VOLS); vc = b.slice(0, 3).map(x => ({ val: x.k, cost: x.dist - b[0].dist })); vLow = ratio(b) > LOW; }
     }
-    if (found) { vals = value(); corrected = true; }
+    fields.push({ k, idx, j: 0, cands: pc, low: pLow }, { k, idx, j: 1, cands: vc, low: vLow });
   }
-  clues.forEach((sl, i) => sl.forEach((c, j) => { worst = Math.max(worst, c[pick[i][j]].dist); }));
-  return { rows: vals.slice(0, 5), cols: vals.slice(5), known, worst, corrected, coherent: coherent(vals) };
+  const val = fields.map(f => (f.cands ? f.cands[0].val : null));
+  const side = i => (fields[i].k === 'rows' ? 0 : 1);
+  const lineOk = (pts, vol) => pts === null || vol === null || (vol <= 5 && pts >= 5 - vol && pts <= 3 * (5 - vol));
+  const coherent = v => {
+    if (v.some(x => x === null)) return false;
+    let s = [0, 0, 0, 0];
+    fields.forEach((f, i) => { s[f.j * 2 + side(i)] += v[i]; });
+    if (s[0] !== s[1] || s[2] !== s[3]) return false;
+    for (let i = 0; i < 20; i += 2) if (!lineOk(v[i], v[i + 1])) return false;
+    return true;
+  };
+  const doubtField = (i, options) => {
+    const f = fields[i], opts = [...new Set(options.filter(o => o !== null && o !== undefined))];
+    if (!doubts.some(d => d.k === f.k && d.idx === f.idx && d.j === f.j)) doubts.push({ k: f.k, idx: f.idx, j: f.j, options: opts });
+  };
+  const missing = val.map((x, i) => (x === null ? i : -1)).filter(i => i >= 0);
+  if (missing.length) {
+    // Champ illisible : si c'est le seul de son type, les totaux donnent sa valeur
+    for (const i of missing) {
+      const sameType = missing.filter(m => fields[m].j === fields[i].j);
+      let guess = null;
+      if (sameType.length === 1) {
+        let s = [0, 0];
+        fields.forEach((f, m) => { if (f.j === fields[i].j && m !== i) s[side(m)] += val[m]; });
+        const g = s[1 - side(i)] - s[side(i)];
+        if (g >= 0 && g <= (fields[i].j === 0 ? 15 : 5)) guess = g;
+      }
+      val[i] = guess;
+      doubtField(i, guess === null ? [] : [guess]);
+    }
+  } else if (!coherent(val)) {
+    // Un chiffre au moins est mal lu : on cherche les corrections qui rendent les totaux cohérents
+    const sols = [];
+    const alts = i => (fields[i].cands || []).slice(1).map(c => ({ i, val: c.val, cost: c.cost }));
+    const all = []; for (let i = 0; i < 20; i++) all.push(...alts(i));
+    for (const a of all) { const v = val.slice(); v[a.i] = a.val; if (coherent(v)) sols.push({ ch: [a], cost: a.cost }); }
+    if (!sols.length) {
+      for (let x = 0; x < all.length; x++) for (let y = x + 1; y < all.length; y++) {
+        const a = all[x], b = all[y]; if (a.i === b.i) continue;
+        const v = val.slice(); v[a.i] = a.val; v[b.i] = b.val;
+        if (coherent(v)) sols.push({ ch: [a, b], cost: a.cost + b.cost });
+      }
+    }
+    sols.sort((p, q) => p.cost - q.cost);
+    const orig = val.slice();
+    if (sols.length) {
+      sols[0].ch.forEach(c => { val[c.i] = c.val; });
+      const involved = new Set(); sols.slice(0, 4).forEach(s => s.ch.forEach(c => involved.add(c.i)));
+      involved.forEach(i => doubtField(i, [val[i], orig[i], ...sols.slice(0, 4).flatMap(s => s.ch.filter(c => c.i === i).map(c => c.val))]));
+    } else {
+      // Rien ne colle : on montre les chiffres les moins nets
+      fields.map((f, i) => ({ i, low: f.low })).filter(x => x.low).slice(0, 4).forEach(x => doubtField(x.i, fields[x.i].cands.slice(0, 2).map(c => c.val)));
+    }
+  } else {
+    // Lecture cohérente : seul cas piégeux, deux chiffres peu nets qui se compensent (une ligne, une colonne)
+    for (let a = 0; a < 20; a++) for (let b = a + 1; b < 20; b++) {
+      const fa = fields[a], fb = fields[b];
+      if (!fa.low || !fb.low || fa.j !== fb.j || side(a) === side(b)) continue;
+      for (const ca of fa.cands.slice(1)) for (const cb of fb.cands.slice(1)) {
+        const v = val.slice(); v[a] = ca.val; v[b] = cb.val;
+        if (coherent(v)) { doubtField(a, [val[a], ca.val]); doubtField(b, [val[b], cb.val]); }
+      }
+    }
+  }
+  const rows = [], cols = [];
+  for (let n = 0; n < 10; n++) (n < 5 ? rows : cols).push([val[n * 2], val[n * 2 + 1]]);
+  return { rows, cols, known, doubts, coherent: coherent(val) };
 }
 function resample(img, sx, sy, sw, sh, f) {
   const W = img.width, d = img.data, nw = Math.round(sw * f), nh = Math.round(sh * f), out = new Uint8ClampedArray(nw * nh * 4);
@@ -9914,7 +10232,8 @@ function comb(prof, extent) {
   }
   return Array.from({ length: 6 }, (_, k) => [bo + k * bp, bo + k * bp + bw]);
 }
-function components(mask, w, h, minH) {
+function components(mask, w, h, minH, minN) {
+  if (minN === undefined) minN = 8;
   const lab = new Int32Array(w * h), out = [], st = [];
   let cur = 0;
   for (let i = 0; i < w * h; i++) {
@@ -9930,10 +10249,31 @@ function components(mask, w, h, minH) {
       if (y > 0 && mask[q - w] && !lab[q - w]) { lab[q - w] = cur; st.push(q - w); }
       if (y < h - 1 && mask[q + w] && !lab[q + w]) { lab[q + w] = cur; st.push(q + w); }
     }
-    if (ymax - ymin + 1 >= minH && pts.length >= 8) out.push({ x: xmin, n: pts.length, pts, xmin, xmax, ymin, ymax, w });
+    if (ymax - ymin + 1 >= minH && pts.length >= minN) out.push({ x: xmin, n: pts.length, pts, xmin, xmax, ymin, ymax, w });
   }
   out.sort((a, b) => a.x - b.x);
   return out;
+}
+function groupByX(cs) {
+  const g = [];
+  for (const c of cs.slice().sort((a, b) => a.xmin - b.xmin)) {
+    const last = g[g.length - 1];
+    if (last) {
+      const ov = Math.min(last.xmax, c.xmax) - Math.max(last.xmin, c.xmin) + 1;
+      const narrow = Math.min(last.xmax - last.xmin + 1, c.xmax - c.xmin + 1);
+      if (ov >= 0.5 * narrow) {
+        last.pts = last.pts.concat(c.pts); last.n += c.n;
+        last.xmin = Math.min(last.xmin, c.xmin); last.xmax = Math.max(last.xmax, c.xmax);
+        last.ymin = Math.min(last.ymin, c.ymin); last.ymax = Math.max(last.ymax, c.ymax); last.x = last.xmin;
+        continue;
+      }
+    }
+    g.push(Object.assign({}, c));
+  }
+  return g;
+}
+function pieces(mask, w, h, minH) {
+  return groupByX(components(mask, w, h, 0, 3)).filter(c => c.ymax - c.ymin + 1 >= minH && c.n >= 8);
 }
 function glyph(c) {
   const GW = 12, GH = 16, w = c.xmax - c.xmin + 1, h = c.ymax - c.ymin + 1;
@@ -9964,7 +10304,7 @@ function cardInfo(t) {
     ink[y * r.w + x] = (!isG && (R + G + B) / 3 < 130) ? 1 : 0;
   }
   if (greens / n > 0.35) return null;           // carte cachée
-  const cs = components(ink, r.w, r.h, 0.3 * r.h);
+  const cs = pieces(ink, r.w, r.h, 0.3 * r.h);
   if (!cs.length) return false;
   return glyph(cs.reduce((a, b) => (b.n > a.n ? b : a)));
 }
@@ -9982,7 +10322,7 @@ function clueInfo(t) {
   if (top.h < 5) return null;
   const ink = new Uint8Array(top.w * top.h);
   for (let y = 0; y < top.h; y++) for (let x = 0; x < top.w; x++) { const s = ((top.y0 + y) * t.w + top.x0 + x) * 3; ink[y * top.w + x] = (t.px[s] + t.px[s + 1] + t.px[s + 2]) / 3 < 110 ? 1 : 0; }
-  const tops = components(ink, top.w, top.h, 0.4 * top.h).map(c => ({ x: c.x, n: c.n, v: glyph(c) }));
+  const tops = pieces(ink, top.w, top.h, 0.4 * top.h).map(c => ({ x: c.x, n: c.n, v: glyph(c) }));
   const bot = { x0: Math.floor(t.w * 0.55), x1: Math.floor(t.w * 0.95), y0: split + 2, y1: Math.floor(t.h * 0.94) };
   bot.w = bot.x1 - bot.x0; bot.h = bot.y1 - bot.y0;
   if (bot.h < 5) return null;
@@ -9991,235 +10331,47 @@ function clueInfo(t) {
     const s = ((bot.y0 + y) * t.w + bot.x0 + x) * 3, R = t.px[s], G = t.px[s + 1], B = t.px[s + 2];
     wm[y * bot.w + x] = ((R + G + B) / 3 > WHITE_L && Math.max(R, G, B) - Math.min(R, G, B) < WHITE_S) ? 1 : 0;
   }
-  const cb = components(wm, bot.w, bot.h, 0.35 * bot.h);
+  const cb = pieces(wm, bot.w, bot.h, 0.35 * bot.h);
   return { tops, bot: cb.length ? glyph(cb.reduce((a, b) => (b.n > a.n ? b : a))) : null };
 }
-const OCR_TPL={"top":{"0":[0,0,0,0.201,1,1,1,1,0.799,0,0,0,0,0,0,0.201,1,1,1,1,0.799,0,0,0,0,0,0.201,1,1,1,1,1,1,1,0,0,0,0.201,1,1,1,1,0.201,1,1,1,1,0,0.799,1,1,1,0.799,0,0,0,1,1,1,0.799,0.799,1,1,1,0,0,0,0,0.201,1,1,0.799,1,1,1,1,0,0,0,0,0.201,1,1,0.799,1,1,1,0.799,0,0,0,0,0.201,1,1,1,1,1,1,0.799,0,0,0,0,0.201,1,1,1,1,1,1,0.799,0,0,0,0,0.201,1,1,1,1,1,1,1,0,0,0,0,0.201,1,1,0.799,1,1,1,1,0,0,0,0,0.201,1,1,0.799,0.799,1,1,1,0.799,0,0,0,1,1,1,0.799,0,0.201,1,1,1,0.799,0,1,1,1,1,0,0,0,0.799,1,1,1,1,1,1,1,0.201,0,0,0,0,0.201,1,1,1,1,1,0,0,0,1.6],"1":[0,0,0,0,0,0.833,1,1,0,0,0,0,0,0,0,0,0,0.833,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1.571],"2":[0,0,0,1,1,1,1,1,1,0.706,0,0,0,0,0,1,1,1,1,1,1,0.706,0,0,0,0.294,1,1,1,1,1,1,1,1,1,0,0.706,1,1,1,1,1,1,1,1,1,1,0.706,1,1,1,1,0,0,0,0,0.294,1,1,1,1,1,1,0.706,0,0,0,0,0.294,1,1,1,0,0,0,0,0,0,0,0,0.824,1,1,1,0,0,0,0,0,0,0,0.353,1,1,1,0.176,0,0,0,0,0,0,1,1,1,1,0.706,0,0,0,0,0,0,0,1,1,1,1,0.706,0,0,0,0,0,1,1,1,1,1,0.176,0,0,0,0,0.824,1,1,1,1,0.706,0,0,0,0,0.706,1,1,1,1,0.706,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1.613],"3":[0.622,0.911,1,1,1,1,1,1,1,1,1,0,0.622,0.911,1,1,1,1,1,1,1,1,1,0,0.711,1,1,1,1,1,1,1,1,1,1,0,0.622,0.911,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,0.711,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0.289,1,1,1,0.2,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0.8,1,1,1,1,0.2,0,0,0,0,0,0,0.8,1,1,1,1,0.2,0,0,0,0,0,0,0,0,0.289,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0.711,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0.289,1,1,1,1,0.511,0.8,1,1,1,1,1,1,1,1,1,0.2,0,0,0.289,1,1,1,1,1,1,1,0,0,1.613],"4":[0,0,0,0,0.148,1,1,1,1,1,0,0,0,0,0,0,0.148,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0.148,1,1,1,1,1,1,0,0,0,0,0,0.803,1,1,0.197,1,1,1,0,0,0,0,0,1,1,1,0,1,1,1,0,0,0,0,1,1,1,0.148,0,1,1,1,0,0,0,0.148,1,1,0.852,0,0,1,1,1,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,1,1,1,0,0,1,1,1,0.852,0,0,0,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,0.197,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,1.714],"5":[0.078,0.078,1,1,1,1,1,1,1,1,1,0.022,0.078,0.078,1,1,1,1,1,1,1,1,1,0.022,0.156,0.156,1,1,1,1,1,1,1,1,1,0.122,0.156,0.156,1,1,1,1,1,1,1,1,1,0.122,0.878,0.878,1,1,0,0,0,0,0,0,0,0,0.878,0.878,1,1,0,0,0,0,0,0,0,0,0.878,0.878,1,1,0,1,1,1,1,1,0.844,0,1,1,1,1,1,1,1,1,1,1,1,0.122,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0.156,1,1,1,0,0,0,0,0,0,0,0,0.156,1,1,1,1,1,1,1,0,0,0,0,0.878,1,1,1,1,1,1,1,1,0.122,0,1,1,1,1,0.844,0.156,0.156,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,0.844,0,0,1.571],"6":[0,0,0,0.186,1,1,1,1,1,0.488,0,0,0,0,0,0.186,1,1,1,1,1,0.488,0,0,0,0,0.186,1,1,1,1,1,1,1,0.814,0,0,0.186,1,1,1,1,1,1,1,1,1,0,0.814,1,1,1,0.814,0,0,0,1,1,1,0.488,0.814,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,1,0.814,0,0,0,1,1,1,1,0,1,1,1,1,1,0.814,0,1,1,1,1,0.186,1,1,1,1,1,1,0.488,1,1,1,1,0.186,1,1,1,1,1,1,0.488,1,1,1,1,1,0,0,0,0.512,1,1,0.814,0.814,1,1,1,0.814,0,0,0,0.186,1,1,1,0.814,1,1,1,0.814,0,0,0,0.512,1,1,0.814,0,0.186,1,1,1,0.814,0,0.512,1,1,1,0.814,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0.512,1,1,1,1,1,1,0,0,1.598],"7":[0.813,1,1,1,1,1,1,1,1,1,1,1,0.813,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0.813,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0.906,1,1,0,0,0,0,0,0,0,0,0.906,1,1,0.094,0,0,0,0,0,0,0,0.906,1,1,0.75,0,0,0,0,0,0,0,0.25,1,1,1,0,0,0,0,0,0,0,0,1,1,1,0.094,0,0,0,0,0,0,0,0,1,1,1,0.094,0,0,0,0,0,0,0,0.25,1,1,1,0,0,0,0,0,0,0,0,1,1,1,0.75,0,0,0,0,0,0,0,0.25,1,1,1,0,0,0,0,0,0,0,0,0.594,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,1.607],"8":[0,0,0,1,1,1,1,1,1,0.15,0,0,0,0,0,1,1,1,1,1,1,0.15,0,0,0,0,1,1,1,1,1,1,1,1,0.8,0,0.2,0.2,1,1,1,1,1,1,1,1,1,0,0.85,0.85,1,1,0.8,0,0,0,1,1,1,0.15,0.85,0.85,1,1,0.8,0,0,0,1,1,1,0.15,0.2,0.2,1,1,1,0,0,0.2,1,1,1,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0.2,1,1,1,1,1,1,1,0,0,0,0,0.2,1,1,1,1,1,1,1,0,0,0.85,0.85,1,1,1,0,0,0,1,1,1,0.15,1,1,1,1,0,0,0,0,0.2,1,1,0.8,1,1,1,1,0,0,0,0,0.2,1,1,1,1,1,1,1,1,0.8,0,1,1,1,1,0.8,0.2,0.2,1,1,1,1,1,1,1,1,1,0,0,0,0.2,1,1,1,1,1,1,1,0,0,1.571],"9":[0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,0.625,0.375,1,1,1,1,0,1,1,1,1,0.125,0,0,0,1,1,1,0.125,1,1,1,1,0,0,0,0,1,1,1,0.625,1,1,1,1,0.125,0,0,0.375,1,1,1,1,0.875,0.875,1,1,1,1,1,1,0,1,1,1,0,0,1,1,1,1,1,0.625,0,1,1,1,0,0,1,1,1,1,1,0.625,0,1,1,1,0,0,0,0.375,1,1,0,0,0.375,1,1,1,0,0,0,0,0,0,0,0,0.375,1,1,1,0.375,0.375,1,1,0,0,0,0,1,1,1,0.625,1,1,1,1,1,0.625,0.75,1,1,1,1,0,0.375,0.375,1,1,1,1,1,1,1,1,0.125,0,0,0,0,1,1,1,1,1,1,0,0,0,1.571]},"bot":{"0":[0,0,0,0.467,1,1,1,1,1,0,0,0,0,0,0,0.467,1,1,1,1,1,0,0,0,0,0,0.644,1,1,1,1,1,1,1,0.356,0,0,0.467,1,1,1,1,1,1,1,1,1,0,0.178,0.644,1,1,0.356,0,0,0,0.644,1,1,0.356,0.533,1,1,0.533,0,0,0,0,0,1,1,0.533,1,1,1,0.356,0,0,0,0,0,0.644,1,1,1,1,1,0.356,0,0,0,0,0,0.644,1,1,1,1,1,0.356,0,0,0,0,0,0.644,1,1,1,1,1,0.356,0,0,0,0,0,0.644,1,1,1,1,1,0.356,0,0,0,0,0,0.644,1,1,1,1,1,0.533,0,0,0,0,0,0.644,1,0.533,0.178,0.644,1,1,0.356,0,0,0,0.467,1,1,0.356,0,0.467,1,1,1,0.533,0,1,1,1,1,0,0,0,0.644,1,1,1,1,1,1,1,0.356,0,0,0,0,0.644,1,1,1,1,1,0.356,0,0,1.638],"1":[0,0,0,0,0,0.319,0.319,0.319,1,1,1,1,0,0,0,0,0,0.319,0.319,0.319,1,1,1,1,0,0,0,0.191,0.191,1,1,1,1,1,0.809,0.809,0.319,0.319,0.319,1,1,1,1,1,1,1,0.809,0.809,0.319,0.319,0.319,1,1,1,1,1,1,1,0.809,0.809,1,1,1,1,1,1,1,1,1,1,0.809,0.809,0,0,0,0,0,0.319,0.319,0.319,1,1,0.809,0.809,0,0,0,0,0,0.319,0.319,0.319,1,1,0.809,0.809,0,0,0,0,0,0.319,0.319,0.319,1,1,0.809,0.809,0,0,0,0,0,0.319,0.319,0.319,1,1,0.809,0.809,0,0,0,0,0,0.319,0.319,0.319,1,1,0.809,0.809,0,0,0,0,0,0.319,0.319,0.319,1,1,0.809,0.809,0,0,0,0,0,0.319,0.319,0.319,1,1,0.809,0.809,0,0,0,0,0,0.319,0.319,0.319,1,1,0.809,0.809,0,0,0,0,0,0.319,0.319,0.319,1,1,0.809,0.809,0,0,0,0,0,0.319,0.319,0.319,1,1,0.809,0.809,0.714],"2":[0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0.607,0.607,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,0.393,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,0.231,0,0,0,0,0,0.769,1,1,0,0,0,0,0,0,0,0,0,1,1,0.393,0,0,0,0,0,0,0,0,1,1,1,0.231,0,0,0,0,0,0.607,1,1,1,1,0.393,0,0,0,0,0,0,0.607,1,1,1,1,0.393,0,0,0,0,0,1,1,1,1,1,0.393,0,0,0,0,0.769,1,1,1,1,1,0,0,0,0,1,1,1,1,1,0.393,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1.429],"3":[0.145,0.145,1,1,1,1,1,1,1,1,1,0.145,0.145,0.145,1,1,1,1,1,1,1,1,1,0.145,0.145,0.145,1,1,1,1,1,1,1,1,1,0.145,0.145,0.145,1,1,1,1,1,1,1,1,1,0.145,0,0,0,0,0,0,0,0.565,1,1,1,0,0,0,0,0,0,0.145,1,1,1,0.145,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0.145,1,1,1,1,1,1,0.145,0,0,0,0,0,0,0,1,1,1,1,1,0.145,0,0,0,0,0,0,1,1,1,1,1,0.145,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0.855,1,1,1,1,1,0.855,0,0,0,0,0,0.855,1,1,0.71,0.71,1,1,1,0.29,0,0,1,1,1,1,0.145,0.145,1,1,1,1,1,1,1,1,1,0.145,0,0,0.145,1,1,1,1,1,1,1,0.145,0,1.551],"4":[0,0,0,0,0.5,1,1,1,1,1,0,0,0,0,0,0,0.5,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0.5,1,1,0,0.5,1,1,0,0,0,0,0,1,1,0.5,0,0.5,1,1,0,0,0,0,1,1,1,0,0,0.5,1,1,0,0,0,0.5,1,1,0,0,0,0.5,1,1,0,0,0.5,1,1,0.5,0,0,0,0.5,1,1,0,0,0.5,1,1,0.5,0,0,0,0.5,1,1,0,0,1,1,1,0,0,0,0,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0.5,1,1,1,0.5,0,0,0,0,0,0,0,0,0.5,1,1,0,0,0,0,0,0,0,0,0,0.5,1,1,0,0,1.714]},"card":{"1":[0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0.5,0.5,0.5,0.5,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,0.818],"2":[0,0,0,0.5,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0.75,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,0.5,1,1,1,0.75,0,0,0,0.25,1,1,1,0.5,1,1,1,0.5,0,0,0,0,1,1,1,0.5,0,0.5,0.5,0.25,0,0,0,0.25,1,1,1,0.5,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0.5,0.75,1,1,1,0.75,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0.5,1,1,1,1,1,0.25,0,0,0,0,1,1,1,1,1,0.5,0,0,0,0,0,0,1,1,1,1,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1.565],"3":[0,1,1,1,1,1,1,1,1,1,1,0.5,0,1,1,1,1,1,1,1,1,1,1,0.5,0,1,1,1,1,1,1,1,1,1,1,0.5,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,0.5,0,0,0,0,0,0.5,0.75,1,1,0.75,0,0,0,0,0,0,0.5,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0.5,0,0,0,0,0.5,0,0.5,1,1,1,1,1,0.5,0,0,0,0,0,0,0,0,1,1,1,0.5,0,0,0,0,0,0,0,0,0.5,1,1,1,0,1,1,0.5,0,0,0,0,0.5,1,1,1,1,1,1,1,0,0,0,0,0.5,1,1,1,0.5,1,1,1,1,0.5,0.5,0.5,1,1,1,0.75,0,1,1,1,1,1,1,1,1,1,1,0.5,0,0.25,0.5,1,1,1,1,1,1,1,0.5,0,1.727]}};
-
-// ---------- Interface intégrée à l’onglet Voltorbe ----------
-const $vb = id => document.getElementById(id);
-const VB_KEY = 'holopocket-aide-voltorbe';
-const emptyState = () => ({ rows: Array.from({ length: 5 }, () => [null, null]), cols: Array.from({ length: 5 }, () => [null, null]), known: new Array(25).fill(0) });
-let state = emptyState(), mode = 'sur';
-try {
-  const saved = JSON.parse(localStorage.getItem(VB_KEY) || 'null');
-  if (saved && saved.state && Array.isArray(saved.state.known) && saved.state.known.length === 25) state = saved.state;
-  if (saved && saved.mode === 'best') mode = 'best';
-} catch (e) { /* stockage indisponible */ }
-function save() { try { localStorage.setItem(VB_KEY, JSON.stringify({ state, mode })); } catch (e) { /* rien */ } }
-function setMode(m) {
-  mode = m; save();
-  $vb('vb-mode-safe').setAttribute('aria-pressed', String(m === 'sur'));
-  $vb('vb-mode-best').setAttribute('aria-pressed', String(m === 'best'));
-}
-setMode(mode);
-$vb('vb-mode-safe').addEventListener('click', () => { setMode('sur'); schedule(); });
-$vb('vb-mode-best').addEventListener('click', () => { setMode('best'); schedule(); });
-
-const board = $vb('vb-board'), statusEl = $vb('vb-status'), hintEl = $vb('vb-hint');
-const tiles = [], inputs = { rows: [], cols: [] };
-function makeClue(kind, idx) {
-  const box = document.createElement('div'); box.className = 'vb-clue';
-  const label = kind === 'rows' ? 'Ligne ' + (idx + 1) : 'Colonne ' + (idx + 1);
-  const pts = document.createElement('input');
-  pts.type = 'number'; pts.inputMode = 'numeric'; pts.min = 0; pts.max = 15; pts.placeholder = 'pts';
-  pts.setAttribute('aria-label', label + ', total de points');
-  const vrow = document.createElement('div'); vrow.className = 'vb-vrow';
-  const icon = document.createElement('span'); icon.className = 'vb-vicon'; icon.setAttribute('aria-hidden', 'true');
-  const vol = document.createElement('input');
-  vol.type = 'number'; vol.inputMode = 'numeric'; vol.min = 0; vol.max = 5; vol.placeholder = 'V';
-  vol.setAttribute('aria-label', label + ', nombre de Voltorbe');
-  vrow.append(icon, vol); box.append(pts, vrow);
-  [pts, vol].forEach((el, j) => el.addEventListener('input', () => {
-    const v = el.value === '' ? null : parseInt(el.value, 10);
-    state[kind][idx][j] = Number.isFinite(v) ? v : null; save(); schedule();
-  }));
-  inputs[kind].push([pts, vol]);
-  return box;
-}
-for (let r = 0; r < 5; r++) {
-  for (let c = 0; c < 5; c++) {
-    const i = r * 5 + c;
-    const t = document.createElement('button'); t.type = 'button'; t.className = 'vb-tile';
-    t.innerHTML = '<span class="vb-big"></span><span class="vb-small"></span><span class="vb-bar"></span>';
-    t.addEventListener('click', () => { state.known[i] = (state.known[i] + 1) % 4; save(); schedule(); });
-    tiles.push(t); board.appendChild(t);
-  }
-  board.appendChild(makeClue('rows', r));
-}
-for (let c = 0; c < 5; c++) board.appendChild(makeClue('cols', c));
-const corner = document.createElement('div'); corner.className = 'vb-corner'; board.appendChild(corner);
-
-function fillInputs() {
-  ['rows', 'cols'].forEach(k => inputs[k].forEach((pair, idx) => pair.forEach((el, j) => {
-    const v = state[k][idx][j]; el.value = v === null || v === undefined ? '' : v;
-  })));
-}
-const importMsg = $vb('vb-msg');
-$vb('vb-reset').addEventListener('click', () => { state = emptyState(); importMsg.textContent = ''; save(); fillInputs(); schedule(); });
-$vb('vb-clear').addEventListener('click', () => { state.known = new Array(25).fill(0); save(); schedule(); });
-
-const pos = i => 'ligne ' + (Math.floor(i / 5) + 1) + ', colonne ' + (i % 5 + 1);
-const pct = x => Math.round(x * 100) + ' %';
-function setTile(i, cls, big, small, risk, aria) {
-  const t = tiles[i];
-  t.className = 'vb-tile' + (cls ? ' ' + cls : '');
-  t.querySelector('.vb-big').textContent = big;
-  t.querySelector('.vb-small').textContent = small;
-  t.querySelector('.vb-bar').style.width = risk ? Math.round(risk * 100) + '%' : '0';
-  t.setAttribute('aria-label', 'Carte ' + pos(i) + ' : ' + aria);
-}
-function plainBoard() {
-  for (let i = 0; i < 25; i++) {
-    const k = state.known[i];
-    if (k) setTile(i, 'revealed' + (k >= 2 ? ' high' : ''), String(k), '', 0, 'retournée, ' + k);
-    else setTile(i, 'idle', '?', '', 0, 'cachée');
-  }
-}
-function markMissing() {
-  let missing = 0;
-  ['rows', 'cols'].forEach(k => inputs[k].forEach((pair, idx) => pair.forEach((el, j) => {
-    const val = state[k][idx][j], empty = val === null || val === undefined;
-    el.classList.toggle('missing', empty); if (empty) missing++;
-  })));
-  return missing;
-}
-function lineError() {
-  const missing = markMissing();
-  if (missing) return { incomplete: true, missing };
-  for (const k of ['rows', 'cols']) for (let idx = 0; idx < 5; idx++) {
-    const [s, v] = state[k][idx];
-    const name = (k === 'rows' ? 'Ligne ' : 'Colonne ') + (idx + 1);
-    if (v < 0 || v > 5 || s < 0) return { msg: name + ' : nombre de Voltorbe impossible.' };
-    const free = 5 - v;
-    if (s < free || s > free * 3) return { msg: name + ' : ' + s + ' points avec ' + v + ' Voltorbe, c’est impossible. Vérifie ces deux nombres.' };
-  }
-  const sr = state.rows.reduce((a, x) => a + x[0], 0), sc = state.cols.reduce((a, x) => a + x[0], 0);
-  const vr = state.rows.reduce((a, x) => a + x[1], 0), vc = state.cols.reduce((a, x) => a + x[1], 0);
-  if (sr !== sc) return { msg: 'Les lignes totalisent ' + sr + ' points et les colonnes ' + sc + ' : une case d’indice est mal recopiée.' };
-  if (vr !== vc) return { msg: 'Les lignes comptent ' + vr + ' Voltorbe et les colonnes ' + vc + ' : une case d’indice est mal recopiée.' };
-  return null;
-}
-let timer = null, token = 0;
-function schedule() { clearTimeout(timer); plainBoard(); timer = setTimeout(run, 120); }
-function para(cls, text) { const p = document.createElement('p'); p.className = cls; p.textContent = text; return p; }
-function setStatus(...ps) { statusEl.textContent = ''; ps.filter(Boolean).forEach(p => statusEl.append(p)); }
-function run() {
-  const my = ++token;
-  const err = lineError();
-  if (err) {
-    plainBoard();
-    if (err.incomplete) setStatus(para('vb-advice', 'Il manque ' + err.missing + (err.missing > 1 ? ' nombres' : ' nombre') + ' dans les cases d’indice.'),
-      para('vb-facts', 'Le calcul démarre dès que les 20 nombres sont remplis : le total de points et le nombre de Voltorbe (même 0) pour chaque ligne et chaque colonne. Les cases à remplir sont entourées en rouge.'));
-    else setStatus(para('warn', err.msg));
-    hintEl.textContent = err.incomplete ? 'Il manque ' + err.missing + (err.missing > 1 ? ' nombres' : ' nombre') + ', entourés en rouge. Mets 0 quand une ligne ou une colonne n’a aucun Voltorbe.' : err.msg;
-    return;
-  }
-  const known = state.known.slice();
-  const { sols, overflow } = enumerate(state.rows, state.cols, known, 250000);
-  if (!sols.length) {
-    plainBoard();
-    setStatus(para('warn', 'Aucune grille ne correspond. Vérifie les indices et les chiffres des cartes retournées.'));
-    hintEl.textContent = 'Aucune grille ne correspond : vérifie ta saisie.';
-    return;
-  }
-  const { cells, finished } = analyse(sols, known);
-  const sure = [];
-  for (let i = 0; i < 25; i++) {
-    const k = known[i], c = cells[i];
-    if (k) { setTile(i, 'revealed' + (k >= 2 ? ' high' : ''), String(k), '', 0, 'retournée, ' + k); continue; }
-    const [n0, n1, n2, n3] = c.cnt, n = sols.length;
-    if (n0 === n) setTile(i, 'volt', 'V', 'Voltorbe', 0, 'Voltorbe certain');
-    else if (n2 + n3 === n) { sure.push(i); setTile(i, 'sure', n2 === n ? '2' : n3 === n ? '3' : '2 ou 3', 'sûr', 0, n2 === n ? '2 garanti' : n3 === n ? '3 garanti' : '2 ou 3 garanti'); }
-    else if (n1 === n) setTile(i, 'dim', '1', 'rien', 0, 'un 1 certain, rien à gagner');
-    else if (n2 + n3 === 0) setTile(i, 'dim', pct(c.risk), '1 ou V', c.risk, 'seulement 1 ou Voltorbe, risque ' + pct(c.risk));
-    else setTile(i, '', pct(c.risk), 'gain ' + pct(c.gain), c.risk, 'risque ' + pct(c.risk) + ', 2 ou 3 à ' + pct(c.gain));
-  }
-  const count = (overflow ? 'Plus de 250 000' : sols.length.toLocaleString('fr-FR')) + (sols.length > 1 ? ' grilles possibles' : ' grille possible');
-  if (finished) {
-    setStatus(para('vb-advice', 'Grille finie : tous les 2 et 3 sont retournés.'), para('vb-facts', 'Passe à la grille suivante et touche « Nouvelle grille ».'));
-    hintEl.textContent = 'Grille finie : tous les 2 et 3 sont retournés.';
-    return;
-  }
-  if (sure.length) {
-    sure.forEach(i => tiles[i].classList.add('reco'));
-    const msg = 'Retourne les cartes jaunes : ' + (sure.length > 1 ? 'elles sont garanties.' : 'elle est garantie.');
-    setStatus(para('vb-advice', msg), para('vb-facts', count + '. Après les avoir retournées, recopie leurs chiffres ici.'));
-    hintEl.textContent = msg;
-    return;
-  }
-  if (mode === 'sur') {
-    let s = -1;
-    for (let i = 0; i < 25; i++) {
-      if (known[i]) continue; const c = cells[i];
-      if (c.risk === 1 || c.cnt[1] === sols.length) continue;
-      if (s < 0 || c.risk < cells[s].risk - 1e-9 || (Math.abs(c.risk - cells[s].risk) < 1e-9 && c.gain > cells[s].gain)) s = i;
-    }
-    if (s >= 0) { showAdvice(s, cells[s].risk, cells[s].gain, null, count, false, true); return; }
-  }
-  let h = -1;
-  for (let i = 0; i < 25; i++) {
-    if (known[i]) continue; const c = cells[i];
-    if (c.gain === 0 || c.risk === 1) continue;
-    if (h < 0 || c.risk < cells[h].risk - 1e-9 || (Math.abs(c.risk - cells[h].risk) < 1e-9 && c.gain > cells[h].gain)) h = i;
-  }
-  if (h < 0) { setStatus(para('vb-facts', count + '.')); hintEl.textContent = ''; return; }
-  showAdvice(h, cells[h].risk, cells[h].gain, null, count, sols.length <= 150);
-  if (sols.length <= 150) {
-    setTimeout(() => {
-      if (my !== token) return;
-      try {
-        const b = bestMove(sols, known, 300000);
-        if (my !== token || b.c < 0) return;
-        showAdvice(b.c, cells[b.c].risk, cells[b.c].gain, b.p, count, false);
-      } catch (e) { if (my === token) showAdvice(h, cells[h].risk, cells[h].gain, null, count, false); }
-    }, 30);
-  }
-}
-function showAdvice(i, risk, gain, pFinish, count, computing, safe) {
-  tiles.forEach(t => t.classList.remove('reco'));
-  tiles[i].classList.add('reco');
-  const label = safe ? 'Case la plus sûre' : 'Coup conseillé';
-  setStatus(
-    para('vb-advice', label + ' : ' + pos(i) + '.'),
-    para('vb-facts', 'Risque de Voltorbe ' + pct(risk) + ', chances d’un 2 ou d’un 3 : ' + pct(gain) + '.'),
-    safe && gain === 0 ? para('vb-facts', 'Elle ne peut cacher qu’un 1 ou un Voltorbe : elle ne rapporte rien, mais elle donne des indices pour la suite.') : null,
-    para('vb-facts', count + (pFinish !== null ? ', chances de finir la grille en jouant au mieux : ' + pct(pFinish) : '') + (computing ? ', calcul du meilleur coup en cours…' : '') + '.'),
-    risk > 0.3 ? para('warn', 'Coup risqué. Si tu tiens à tes jetons de grille, « S’arrêter là » peut être plus sage.') : null);
-  hintEl.textContent = label + ' : ' + pos(i) + ', ' + pct(risk) + ' de risque.';
-}
-
-// ---------- Capture : bouton, coller, déposer (seulement quand l’onglet Voltorbe est ouvert) ----------
-const importBtn = $vb('vb-import'), importFile = $vb('vb-file'), panel = $vb('v-voltorbe');
+const OCR_TPL={"top":{"0":[0,0,0.01,0.239,0.815,0.973,0.999,0.975,0.743,0.146,0.003,0,0,0,0.01,0.239,0.815,0.973,0.999,0.975,0.743,0.146,0.003,0,0.002,0.01,0.38,0.972,1,0.996,0.992,0.998,1,0.94,0.204,0.001,0.078,0.208,0.956,1,0.991,0.729,0.394,0.81,0.996,0.999,0.894,0.061,0.569,0.741,1,1,0.678,0.011,0,0.055,0.85,1,0.998,0.507,0.767,0.906,1,0.984,0.171,0,0,0.001,0.396,0.996,1,0.753,0.927,0.984,1,0.945,0.041,0,0,0,0.228,0.989,1,0.825,0.992,0.999,1,0.825,0.008,0,0,0,0.168,0.982,1,0.979,1,1,1,0.789,0.008,0,0,0,0.133,0.973,1,0.992,0.996,1,1,0.809,0.009,0,0,0,0.132,0.972,1,0.982,0.961,0.993,1,0.939,0.032,0,0,0,0.199,0.99,1,0.853,0.87,0.953,1,0.974,0.117,0,0,0.001,0.338,0.996,1,0.754,0.648,0.811,1,0.999,0.568,0.007,0.001,0.015,0.762,1,0.999,0.519,0.175,0.338,0.991,1,0.983,0.554,0.151,0.659,0.996,1,0.937,0.076,0.005,0.026,0.648,0.993,1,0.999,0.991,1,1,0.969,0.331,0.001,0,0,0.027,0.438,0.939,0.992,0.996,0.989,0.877,0.236,0.005,0,1.615],"1":[0,0,0,0,0.056,0.528,0.972,0.833,0.028,0,0,0,0,0,0,0,0.056,0.528,0.972,0.833,0.028,0,0,0,0,0,0.028,0.111,0.472,1,1,1,0.194,0,0,0,0,0,0.694,1,1,1,1,1,0.111,0,0,0,0,0,0.917,1,1,1,1,1,0.111,0,0,0,0,0,0.528,0.722,0.861,1,1,1,0.111,0,0,0,0,0,0.056,0.056,0.194,0.972,1,1,0.111,0,0,0,0,0,0,0,0.028,0.917,1,1,0.111,0,0,0,0,0,0,0,0.083,0.944,1,1,0.111,0,0,0,0,0,0,0,0.083,0.944,1,1,0.111,0,0,0,0,0,0,0,0.083,0.944,1,1,0.111,0,0,0,0,0,0,0,0.083,0.917,1,1,0.111,0,0,0,0,0,0,0,0.139,0.972,1,1,0.167,0,0,0,0.389,0.472,0.667,0.667,0.889,1,1,1,0.889,0.722,0.583,0.472,0.972,1,1,1,1,1,1,1,1,1,1,0.917,0.917,0.972,1,0.972,0.972,0.972,0.972,0.972,0.972,0.972,0.972,0.833,1.622],"2":[0,0.009,0.259,0.806,0.954,0.991,1,0.972,0.907,0.593,0.046,0,0,0.009,0.259,0.806,0.954,0.991,1,0.972,0.907,0.593,0.046,0,0.065,0.444,0.981,1,1,0.991,0.991,1,1,1,0.852,0.046,0.639,0.981,1,0.991,0.898,0.611,0.602,0.833,0.991,1,1,0.597,0.907,1,1,0.861,0.102,0,0,0.009,0.565,0.991,1,0.787,0.722,0.861,0.926,0.454,0,0,0,0,0.417,1,1,0.773,0.037,0.065,0.139,0.037,0,0,0,0.009,0.685,1,1,0.653,0,0,0,0,0,0,0.009,0.472,0.981,1,0.981,0.19,0,0,0,0,0,0.157,0.75,1,1,0.963,0.454,0.009,0,0,0,0,0.037,0.324,0.852,1,1,0.88,0.37,0,0,0,0.009,0.259,0.769,0.991,1,1,0.796,0.222,0,0,0,0.009,0.546,0.963,1,1,0.954,0.593,0.037,0,0,0,0.426,0.806,0.991,1,1,0.722,0.046,0,0,0,0,0,0.963,1,1,1,0.991,0.787,0.426,0.435,0.481,0.611,0.657,0.491,0.991,1,1,1,1,1,1,1,1,1,1,0.972,0.87,1,0.991,0.991,0.991,0.991,0.991,0.991,0.991,0.991,1,0.815,1.673],"3":[0.348,0.677,0.989,0.982,0.982,0.982,0.982,0.986,0.986,0.982,0.77,0.018,0.348,0.677,0.989,0.982,0.982,0.982,0.982,0.986,0.986,0.982,0.77,0.018,0.511,0.865,1,1,1,1,1,1,1,1,0.954,0.044,0.262,0.486,0.684,0.706,0.688,0.674,0.823,0.989,1,1,0.844,0.011,0,0,0.007,0.007,0.007,0.014,0.287,0.972,1,0.865,0.365,0,0,0,0,0.014,0.16,0.759,0.975,0.933,0.599,0.035,0,0,0,0,0.004,0.323,0.894,1,0.996,0.518,0.028,0,0,0,0,0,0.028,0.809,1,1,0.993,0.918,0.745,0.482,0.021,0,0,0,0,0.145,0.234,0.291,0.681,0.911,1,1,0.819,0.129,0,0,0,0.028,0.05,0.089,0.468,0.713,0.968,1,0.947,0.218,0,0,0,0,0,0,0,0,0.429,0.996,1,0.824,0.004,0.018,0.053,0.011,0,0,0,0,0.124,0.989,1,0.986,0.716,0.833,0.957,0.461,0,0,0,0.004,0.209,0.996,1,0.982,0.915,0.996,1,0.975,0.582,0.067,0.028,0.28,0.915,0.996,1,0.771,0.379,0.709,1,1,1,0.947,0.915,0.979,1,1,0.915,0.183,0,0.021,0.493,0.936,0.979,1,0.996,0.993,0.972,0.791,0.099,0,1.651],"4":[0,0,0,0,0.287,0.943,0.973,0.964,0.984,0.874,0.063,0,0,0,0,0,0.287,0.943,0.973,0.964,0.984,0.874,0.063,0,0,0,0,0.016,0.861,1,1,1,1,0.981,0.131,0,0,0,0,0.186,0.989,1,0.989,1,1,0.984,0.115,0,0,0,0.005,0.694,1,0.984,0.475,0.954,1,0.984,0.112,0,0,0,0.148,0.97,1,0.77,0.016,0.836,1,0.984,0.112,0,0,0,0.675,0.997,0.997,0.292,0.011,0.82,1,0.984,0.112,0,0.005,0.238,0.984,1,0.82,0.008,0.014,0.839,1,0.984,0.115,0,0.164,0.872,1,0.984,0.145,0,0.014,0.839,1,0.981,0.115,0,0.314,0.956,1,0.929,0.036,0,0.014,0.847,1,0.984,0.126,0,0.943,1,1,0.762,0.156,0.117,0.246,0.954,1,0.997,0.429,0.093,0.989,1,1,0.973,0.831,0.803,0.907,0.997,1,1,0.962,0.687,0.915,0.989,0.989,0.989,0.989,0.989,1,1,1,1,0.997,0.973,0.115,0.243,0.262,0.251,0.251,0.246,0.434,0.989,1,0.997,0.661,0.142,0,0,0,0,0,0,0.019,0.877,1,0.992,0.169,0,0,0,0,0,0,0,0.008,0.749,0.997,0.929,0.066,0,1.713],"5":[0.2,0.223,0.949,0.989,0.978,0.98,0.98,0.982,0.976,0.982,0.923,0.165,0.2,0.223,0.949,0.989,0.978,0.98,0.98,0.982,0.976,0.982,0.923,0.165,0.452,0.485,1,1,1,1,1,1,1,1,1,0.335,0.518,0.551,1,1,0.897,0.762,0.756,0.749,0.747,0.76,0.727,0.141,0.745,0.775,1,0.96,0.082,0.007,0.007,0.007,0.007,0.011,0.005,0,0.782,0.808,1,0.866,0.013,0.029,0.196,0.332,0.313,0.141,0.015,0,0.808,0.832,1,0.888,0.147,0.672,0.938,0.996,0.993,0.885,0.526,0.004,0.905,0.927,1,0.985,0.969,0.954,0.923,0.974,1,1,0.984,0.26,0.793,0.813,0.96,0.943,0.694,0.051,0.013,0.103,0.824,1,1,0.8,0.637,0.656,0.821,0.778,0.526,0.004,0,0.031,0.733,1,1,0.853,0.007,0.011,0.031,0.029,0.004,0,0,0,0.234,0.995,1,0.984,0.011,0.011,0.02,0.015,0,0,0,0,0.163,0.996,1,0.991,0.592,0.606,0.788,0.614,0.027,0,0,0.013,0.544,1,1,0.896,0.987,0.995,1,0.995,0.782,0.187,0.137,0.557,0.952,1,1,0.626,0.471,0.491,0.998,1,1,0.987,0.985,1,1,1,0.879,0.079,0.009,0.011,0.332,0.921,0.984,0.995,0.996,0.991,0.962,0.736,0.086,0,1.57],"6":[0,0,0.014,0.28,0.809,0.961,0.996,0.996,0.922,0.496,0.057,0,0,0,0.014,0.28,0.809,0.961,0.996,0.996,0.922,0.496,0.057,0,0,0.007,0.358,0.972,1,1,1,0.996,1,1,0.67,0.021,0.113,0.17,0.943,1,1,0.84,0.652,0.762,0.986,1,0.979,0.209,0.546,0.631,1,1,0.77,0.014,0,0.007,0.567,0.851,0.805,0.259,0.762,0.837,1,0.986,0.234,0,0,0.004,0.004,0.028,0.011,0,0.965,0.975,1,0.947,0.05,0,0.121,0.507,0.504,0.181,0.028,0,0.996,0.996,1,0.901,0.057,0.553,0.968,1,1,0.982,0.709,0.053,1,1,1,0.982,0.596,0.83,0.759,0.78,0.968,1,1,0.528,0.993,0.996,1,0.989,0.688,0.762,0.635,0.667,0.933,1,1,0.599,0.979,0.986,1,1,0.777,0.021,0,0,0.408,0.993,1,0.894,0.837,0.901,1,1,0.635,0.007,0,0,0.184,0.979,1,0.996,0.564,0.652,1,1,0.794,0.032,0,0.011,0.39,0.989,1,0.862,0.131,0.199,0.965,1,0.993,0.73,0.273,0.482,0.94,0.996,1,0.628,0.011,0.011,0.56,0.965,1,1,0.993,0.993,1,0.996,0.887,0.096,0,0,0.014,0.358,0.755,0.901,0.989,0.979,0.851,0.695,0.089,0,1.57],"7":[0.813,0.949,0.985,0.98,0.985,0.985,0.985,0.985,0.985,0.985,0.985,0.793,0.813,0.949,0.985,0.98,0.985,0.985,0.985,0.985,0.985,0.985,0.985,0.793,0.98,0.995,1,1,1,1,1,1,1,1,1,0.99,0.465,0.54,0.636,0.631,0.636,0.641,0.631,0.646,0.929,1,1,0.813,0.005,0.01,0.005,0.005,0.005,0.005,0.005,0.066,0.859,1,0.909,0.061,0,0,0,0,0,0,0.045,0.672,1,0.934,0.121,0,0,0,0,0,0,0.005,0.46,0.975,0.995,0.601,0,0,0,0,0,0,0.005,0.192,0.934,1,0.879,0.061,0,0,0,0,0,0,0.025,0.818,1,0.98,0.298,0,0,0,0,0,0,0,0.061,0.934,1,0.965,0.152,0,0,0,0,0,0,0.02,0.475,1,1,0.803,0,0,0,0,0,0,0,0.051,0.879,1,0.995,0.611,0,0,0,0,0,0,0,0.237,0.985,1,0.97,0.197,0,0,0,0,0,0,0,0.505,1,1,0.939,0.051,0,0,0,0,0,0,0.01,0.747,1,1,0.833,0.015,0,0,0,0,0,0,0.015,0.646,0.985,0.985,0.732,0.005,0,0,0,0,1.637],"8":[0,0,0.087,0.722,0.921,0.992,1,0.984,0.889,0.437,0.04,0,0,0,0.087,0.722,0.921,0.992,1,0.984,0.889,0.437,0.04,0,0.032,0.056,0.865,1,1,1,1,1,1,1,0.722,0.024,0.373,0.413,1,1,0.992,0.794,0.643,0.833,1,1,0.992,0.19,0.675,0.714,1,1,0.762,0.032,0,0.056,0.857,1,1,0.389,0.651,0.69,1,1,0.643,0.008,0,0.032,0.794,1,1,0.341,0.222,0.246,0.921,1,0.905,0.175,0.056,0.317,0.976,1,0.897,0.071,0,0,0.389,1,1,0.984,0.976,0.984,1,0.984,0.167,0,0,0.016,0.548,0.984,1,0.984,0.944,1,1,0.984,0.397,0,0,0.016,0.643,0.992,1,0.96,0.881,0.968,1,1,0.492,0.024,0.627,0.659,1,0.992,0.714,0.071,0.008,0.103,0.825,1,1,0.389,0.96,0.96,1,0.952,0.063,0,0,0,0.27,1,1,0.857,0.992,0.992,1,0.976,0.254,0.008,0,0.016,0.421,1,1,0.992,0.857,0.889,1,1,0.96,0.611,0.31,0.667,0.976,1,1,0.746,0.389,0.405,0.96,1,1,1,0.992,1,1,1,0.913,0.159,0,0,0.31,0.762,0.841,0.937,0.992,0.937,0.833,0.722,0.095,0,1.547],"9":[0,0,0.25,0.833,0.958,1,1,0.979,0.771,0.125,0,0,0,0,0.25,0.833,0.958,1,1,0.979,0.771,0.125,0,0,0.146,0.229,1,1,1,1,1,1,1,0.979,0.146,0,0.708,0.771,1,1,0.854,0.375,0.354,0.813,1,1,0.896,0.042,0.979,1,1,0.958,0.188,0,0,0.125,0.958,1,1,0.292,1,1,1,0.896,0,0,0,0.083,0.917,1,1,0.646,0.917,0.938,1,0.979,0.25,0,0.021,0.271,0.979,1,1,0.896,0.688,0.75,1,1,1,0.792,0.792,0.917,0.396,1,1,1,0,0.042,0.854,0.979,1,1,0.854,0.396,0.125,0.979,1,0.938,0,0.042,0.833,0.979,1,1,0.854,0.375,0.125,0.979,1,0.938,0,0,0,0.354,0.688,0.583,0,0,0.25,1,1,0.833,0,0,0.021,0,0,0,0,0.021,0.479,1,1,0.75,0.375,0.458,0.896,0.875,0.188,0,0.021,0.208,0.958,1,0.979,0.417,0.688,0.75,1,1,0.958,0.583,0.688,0.938,1,1,0.854,0,0.125,0.167,0.896,1,1,1,1,1,1,0.917,0.167,0,0,0,0.146,0.792,0.875,0.979,0.938,0.875,0.646,0.063,0,0,1.578]},"bot":{"0":[0,0,0.025,0.457,0.826,0.942,0.986,0.902,0.699,0.152,0.004,0,0,0,0.025,0.457,0.826,0.942,0.986,0.902,0.699,0.152,0.004,0,0,0.033,0.678,0.993,1,1,0.996,1,1,0.942,0.261,0.009,0.065,0.511,0.978,1,0.909,0.685,0.627,0.808,0.975,1,0.877,0.042,0.301,0.793,1,0.957,0.232,0.011,0.004,0.065,0.703,0.996,0.993,0.366,0.725,0.975,0.996,0.554,0.011,0,0,0.004,0.257,0.96,1,0.697,0.917,0.996,0.986,0.319,0,0,0,0,0.065,0.804,1,0.955,0.96,1,0.96,0.228,0,0,0,0,0.018,0.699,1,0.978,0.964,1,0.953,0.217,0,0,0,0,0.014,0.678,1,0.986,0.967,1,0.953,0.217,0,0,0,0,0.014,0.678,1,0.986,0.924,1,0.982,0.319,0.004,0,0,0,0.04,0.793,1,0.958,0.819,0.967,0.993,0.533,0.007,0,0,0,0.199,0.873,1,0.685,0.42,0.862,1,0.931,0.192,0.014,0,0.043,0.62,0.986,0.989,0.362,0.083,0.58,0.993,1,0.92,0.533,0.333,0.761,0.982,1,0.87,0.062,0.004,0.094,0.822,0.996,1,0.996,0.996,1,1,0.953,0.326,0.004,0,0,0.116,0.707,0.928,0.996,1,0.96,0.844,0.246,0.011,0,1.664],"1":[0,0,0,0.076,0.086,0.567,0.714,0.714,0.992,0.997,0.847,0.847,0,0,0,0.076,0.086,0.567,0.714,0.714,0.992,0.997,0.847,0.847,0.207,0.207,0.215,0.663,0.69,0.975,1,1,1,1,0.909,0.909,0.816,0.816,0.835,0.993,0.998,1,1,1,1,1,0.904,0.904,0.848,0.848,0.852,1,1,1,1,1,1,1,0.896,0.896,0.502,0.502,0.515,0.79,0.803,0.985,0.997,0.997,1,1,0.896,0.896,0.045,0.045,0.045,0.295,0.318,0.801,0.874,0.874,1,1,0.896,0.896,0,0,0,0.069,0.082,0.702,0.837,0.837,1,1,0.896,0.896,0,0,0,0.079,0.099,0.714,0.835,0.835,1,1,0.896,0.896,0,0,0,0.079,0.098,0.71,0.835,0.835,1,1,0.896,0.896,0,0,0,0.077,0.096,0.709,0.835,0.835,1,1,0.896,0.896,0,0,0,0.077,0.096,0.709,0.835,0.835,1,1,0.896,0.896,0,0,0,0.077,0.096,0.709,0.835,0.835,1,1,0.896,0.896,0,0,0,0.077,0.096,0.715,0.842,0.842,1,1,0.904,0.904,0,0,0,0.079,0.099,0.731,0.848,0.848,1,1,0.933,0.933,0,0,0,0.077,0.089,0.684,0.811,0.811,1,1,0.869,0.869,0.719],"2":[0.001,0.001,0.071,0.588,0.819,0.963,0.999,0.982,0.858,0.671,0.128,0,0.001,0.001,0.071,0.588,0.819,0.963,0.999,0.982,0.858,0.671,0.128,0,0.175,0.175,0.833,0.996,1,1,1,1,1,0.999,0.896,0.11,0.521,0.525,0.992,0.994,0.95,0.776,0.7,0.754,0.931,0.99,1,0.542,0.799,0.803,1,0.954,0.35,0.019,0.008,0.018,0.25,0.91,1,0.876,0.664,0.665,0.886,0.683,0.047,0,0,0.001,0.061,0.762,1,0.881,0.026,0.026,0.154,0.181,0.003,0,0,0.001,0.158,0.904,1,0.699,0,0,0,0,0,0,0.008,0.093,0.853,0.997,0.994,0.332,0,0,0,0,0,0.15,0.654,0.899,1,0.999,0.661,0.026,0,0,0,0,0.006,0.257,0.808,0.969,1,0.99,0.528,0.013,0,0,0.007,0.085,0.642,0.954,1,1,0.967,0.549,0.025,0,0.014,0.014,0.254,0.733,0.972,1,0.969,0.901,0.367,0.043,0,0,0.487,0.492,0.922,0.997,1,0.874,0.342,0.083,0.007,0.001,0.001,0.001,0.893,0.894,1,1,1,0.986,0.672,0.503,0.476,0.578,0.608,0.542,0.957,0.957,1,1,1,1,1,0.997,0.997,1,1,0.967,0.889,0.89,0.988,0.993,0.996,0.996,0.992,0.992,0.989,0.989,0.985,0.917,1.515],"3":[0.164,0.193,0.971,0.992,0.989,0.992,0.992,0.997,0.997,0.995,0.947,0.183,0.164,0.193,0.971,0.992,0.989,0.992,0.992,0.997,0.997,0.995,0.947,0.183,0.22,0.257,0.989,0.997,1,0.997,0.997,1,1,1,0.987,0.225,0.093,0.111,0.545,0.574,0.571,0.556,0.765,0.944,1,1,0.942,0.146,0,0,0,0,0,0.019,0.336,0.82,0.997,0.849,0.521,0.011,0,0,0,0.005,0.204,0.566,0.968,0.963,0.659,0.148,0.005,0,0,0,0,0.082,0.86,0.997,1,0.915,0.156,0,0,0,0,0,0,0.28,1,1,1,0.997,0.847,0.68,0.206,0.003,0,0,0,0.127,0.336,0.37,0.741,0.844,0.979,1,0.947,0.336,0,0,0,0.053,0.127,0.148,0.492,0.608,0.881,0.997,0.992,0.492,0,0,0.003,0.011,0,0,0,0,0.156,0.913,1,0.876,0.032,0.04,0.161,0.09,0,0,0,0,0.061,0.767,0.995,0.942,0.757,0.772,0.966,0.696,0.045,0,0,0.003,0.106,0.807,1,0.944,0.831,0.854,1,0.995,0.799,0.275,0.116,0.241,0.823,0.995,1,0.825,0.323,0.362,0.981,1,1,0.995,0.979,0.995,1,1,0.968,0.315,0.005,0.005,0.341,0.857,0.966,1,1,0.995,0.95,0.839,0.291,0,1.578],"4":[0,0,0,0,0.333,1,1,1,1,0.833,0.167,0,0,0,0,0,0.333,1,1,1,1,0.833,0.167,0,0,0,0,0,1,1,1,1,1,1,0.25,0,0,0,0,0.25,1,1,1,1,1,1,0.167,0,0,0,0,0.667,1,0.917,0.333,0.833,1,1,0.167,0,0,0,0.333,1,1,0.583,0,0.583,1,1,0.167,0,0,0,0.75,1,1,0.25,0,0.583,1,1,0.167,0,0,0.25,1,1,0.5,0,0,0.583,1,1,0.167,0,0.417,0.833,1,0.75,0.083,0,0,0.583,1,1,0.167,0,0.667,1,1,0.5,0,0,0,0.583,1,1,0.167,0,1,1,1,0.5,0.167,0.167,0.333,1,1,1,0.5,0.167,1,1,1,0.917,0.667,0.667,0.833,1,1,1,0.917,0.667,0.917,1,1,1,1,1,1,1,1,1,1,1,0.333,0.5,0.417,0.417,0.417,0.417,0.667,1,1,1,0.75,0.458,0,0,0,0,0,0,0,0.75,1,1,0.333,0,0,0,0,0,0,0,0,0.417,1,1,0.083,0,1.755]},"card":{"1":[0,0,0,0.001,0.219,0.321,0.87,0.984,0.971,0.974,0.983,0.679,0,0,0.003,0.036,0.655,0.807,1,1,1,1,1,0.967,0.599,0.599,0.802,0.906,0.99,0.995,1,1,1,1,1,0.965,0.987,0.987,1,1,1,1,1,1,1,1,1,0.969,0.988,0.988,1,1,1,1,1,1,1,1,1,0.97,0.508,0.508,0.663,0.693,0.958,0.99,1,1,1,1,1,0.97,0,0,0,0.027,0.668,0.826,1,1,1,1,1,0.97,0,0,0,0.025,0.66,0.819,1,1,1,1,1,0.97,0,0,0,0.025,0.662,0.821,1,1,1,1,1,0.97,0,0,0,0.025,0.662,0.821,1,1,1,1,1,0.97,0,0,0,0.025,0.663,0.822,1,1,1,1,1,0.971,0,0,0,0.025,0.665,0.825,1,1,1,1,1,0.972,0,0,0,0.025,0.669,0.828,1,1,1,1,1,0.972,0,0,0,0.025,0.67,0.83,1,1,1,1,1,0.973,0,0,0,0.025,0.666,0.825,1,1,1,1,1,0.976,0,0,0,0.023,0.63,0.788,0.993,0.979,0.98,0.981,0.987,0.884,0.791],"2":[0,0,0.013,0.379,0.908,0.996,1,0.935,0.504,0.131,0,0,0,0.026,0.733,0.993,1,1,1,1,1,0.904,0.19,0.002,0.019,0.699,1,1,1,1,1,1,1,1,0.972,0.225,0.479,1,1,1,0.969,0.719,0.685,0.892,1,1,1,0.622,0.85,1,1,0.916,0.157,0,0,0.145,0.958,1,1,0.735,0.904,0.999,1,0.67,0,0,0,0.002,0.787,1,1,0.739,0.042,0.328,0.415,0.261,0,0,0,0.161,0.979,1,1,0.657,0,0,0,0,0,0,0.007,0.747,1,1,1,0.355,0,0,0,0,0,0.031,0.677,0.994,1,1,0.967,0.081,0,0,0,0.014,0.331,0.782,1,1,1,0.844,0.182,0.001,0,0,0.024,0.678,0.996,1,1,0.999,0.912,0.127,0,0,0.019,0.402,0.893,1,1,0.997,0.921,0.409,0.018,0,0,0,0.7,1,1,1,0.99,0.59,0.017,0,0,0,0,0,0.935,1,1,1,0.896,0.604,0.624,0.639,0.642,0.642,0.643,0.57,0.912,1,1,1,1,1,1,1,1,1,1,0.99,0.84,0.996,0.998,0.998,0.998,0.998,0.998,0.998,0.998,0.998,0.996,0.939,1.562],"3":[0,0.793,0.959,0.948,0.962,0.959,0.973,0.968,0.982,0.968,0.968,0.227,0.014,0.938,1,1,1,1,1,1,1,1,1,0.351,0.016,0.931,1,1,1,1,1,1,1,1,1,0.347,0.005,0.137,0.189,0.189,0.189,0.182,0.215,0.962,1,1,0.994,0.145,0,0,0,0,0,0.095,0.709,0.995,1,0.88,0.369,0.002,0,0,0,0.006,0.383,0.889,1,1,0.64,0.021,0.001,0,0,0,0,0.591,0.995,1,0.995,0.389,0.096,0.008,0,0,0,0,0.005,0.846,1,1,1,1,1,0.901,0.398,0,0,0,0,0.673,0.635,0.802,0.986,1,1,1,0.989,0.273,0,0,0,0.01,0.002,0.005,0.059,0.292,0.921,1,1,0.644,0,0,0,0.003,0,0,0,0,0.436,1,1,0.955,0.218,0.756,0.889,0.507,0,0,0,0,0.349,1,1,0.992,0.986,1,1,0.93,0.151,0.002,0,0,0.673,1,1,0.946,0.444,0.994,1,1,0.922,0.661,0.634,0.731,0.998,1,1,0.687,0,0.786,1,1,1,1,1,1,1,1,0.989,0.236,0,0.123,0.498,0.786,0.898,0.985,0.992,0.948,0.841,0.712,0.28,0.002,1.665]}};
+const importBtn = document.getElementById('vb-import');
+const importFile = document.getElementById('vb-file');
+const importMsg = document.getElementById('vb-msg');
 let importing = false;
 async function toImageData(file) {
   let bmp;
   try { bmp = await createImageBitmap(file); }
-  catch (e) { bmp = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file); }); }
+  catch (e) {
+    bmp = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file); });
+  }
   const cv = document.createElement('canvas'); cv.width = bmp.width; cv.height = bmp.height;
-  const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(bmp, 0, 0);
+  const cx = cv.getContext('2d', { willReadFrequently: true });
+  cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(bmp, 0, 0);
   return cx.getImageData(0, 0, cv.width, cv.height);
 }
 async function readShot(file) {
   if (importing || !file) return;
   importing = true; importBtn.disabled = true; importMsg.textContent = '';
-  hintEl.textContent = 'Lecture de la capture…';
+  hintEl.textContent = 'Lecture de la capture\u2026';
   try {
     const img = await toImageData(file);
     await new Promise(r => setTimeout(r, 30));
     const g = ocrGrid(img, OCR_TPL);
-    if (!g) { hintEl.textContent = 'Je n’ai pas trouvé la grille sur cette image. Prends une capture de toute la grille, cases d’indice comprises.'; return; }
-    state = { rows: g.rows, cols: g.cols, known: g.known }; save(); fillInputs(); schedule();
-    importMsg.textContent = g.coherent
-      ? 'Grille lue depuis ta capture' + (g.corrected ? ' (un chiffre douteux a été corrigé grâce aux totaux)' : '') + '. En cas de doute, compare vite avec le jeu.'
-      : 'Lecture douteuse : les totaux des lignes et des colonnes ne collent pas. Vérifie les cases d’indice.';
+    if (!g) { hintEl.textContent = 'Je n\u2019ai pas trouv\u00e9 la grille sur cette image. Prends une capture de toute la grille, cases d\u2019indice comprises.'; return; }
+    const ds = g.doubts || [];
+    state = { rows: g.rows, cols: g.cols, known: g.known, doubts: ds }; save(); fillInputs(); schedule();
+    importMsg.textContent = ds.length
+      ? 'Grille lue, avec un doute sur ' + ds.length + (ds.length > 1 ? ' nombres' : ' nombre') + ' : v\u00e9rifie avant de jouer.'
+      : g.coherent ? 'Grille lue depuis ta capture.' : 'Lecture douteuse : les totaux des lignes et des colonnes ne collent pas. V\u00e9rifie les cases d\u2019indice.';
   } catch (e) {
     hintEl.textContent = 'Impossible de lire cette image : essaie une capture PNG ou JPEG.';
   } finally { importing = false; importBtn.disabled = false; }
 }
-const onTab = () => location.hash.slice(1) === 'voltorbe';
 importBtn.addEventListener('click', () => importFile.click());
 importFile.addEventListener('change', () => { const f = importFile.files && importFile.files[0]; importFile.value = ''; readShot(f); });
+const onTab = () => location.hash.slice(1) === 'voltorbe';
+const panel = document.getElementById('v-voltorbe');
 document.addEventListener('paste', e => {
   if (!onTab()) return;
   const items = e.clipboardData ? [...e.clipboardData.items] : [];
@@ -10233,6 +10385,8 @@ panel.addEventListener('drop', e => {
   const f = e.dataTransfer ? [...e.dataTransfer.files].find(x => x.type && x.type.startsWith('image/')) : null;
   if (f) { e.preventDefault(); readShot(f); }
 });
+document.getElementById('vb-reset').addEventListener('click', () => { importMsg.textContent = ''; });
+
 fillInputs();
 schedule();
 
