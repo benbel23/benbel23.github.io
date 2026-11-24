@@ -546,7 +546,7 @@ footer { margin-top: 22px; color: var(--soft); font-size: .8rem; max-width: 80ch
         const g = groups[k];
         if (g.mask & used) continue;
         const r = g.kind === 'rare' ? 1 : 0;
-        if (rare + r > (wildOk ? 0 : 1)) continue;
+        if (rare + r > 1) continue;
         chosen.push(g); rec(k + 1, used | g.mask, chosen, rare + r, need, wildOk); chosen.pop();
       }
     };
