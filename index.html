@@ -424,6 +424,9 @@ footer { margin-top: 22px; color: var(--soft); font-size: .8rem; max-width: 80ch
     { const rs = D.rarities.indexOf('Rare Shiny'), rv = D.rarities.indexOf('Rare Holo V'), rm = D.rarities.indexOf('Rare Holo VMAX');
       const sv = D.sets.findIndex(x => x[0] === 'swsh45sv');
       if (rs >= 0 && sv >= 0) D.cards.forEach(c => { if (c[1] === sv && (c[7] === rv || c[7] === rm)) c[7] = rs; }); }
+    // Le jeu affiche les Pokémon Bébé (Neo, HeartGold SoulSilver) comme « De base »
+    { const bb = D.stages.indexOf('Bébé'), base = D.stages.indexOf('De base');
+      if (bb >= 0 && base >= 0) D.cards.forEach(c => { if (c[5] === bb) c[5] = base; }); }
     D.nameIndex = new Map();
     D.normNames = D.species.map((s, i) => { const k = L.norm(s[0]); D.nameIndex.set(k, i + 1); return k; });
     D.setByIdx = D.sets;
